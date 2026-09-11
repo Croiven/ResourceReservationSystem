@@ -1,0 +1,16 @@
+{
+  "name": "resourcereservationsystem",
+  "version": "1.0.0",
+  "description": "A web application for browsing resources, viewing availability, and making reservations. This project is developed as part of a Master's thesis studying the structural quality and maintainability of software developed with AI assistance.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "sonar": "sonar-scanner"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "sonar-scanner": "^3.1.0"
+  }
+}

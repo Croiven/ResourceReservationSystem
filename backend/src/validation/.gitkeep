@@ -1,0 +1,4 @@
+// Input validation placeholder.
+// Validation schemas will be added when API endpoints are implemented.
+
+export {};
