@@ -7,4 +7,67 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Application schema (users, resources, reservations) will be added later.
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum ResourceType {
+  ROOM
+  EQUIPMENT
+  VEHICLE
+  OTHER
+}
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+model User {
+  id           String        @id @default(cuid())
+  email        String        @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+  role         UserRole      @default(USER)
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  reservations Reservation[]
+
+  @@map("users")
+}
+
+model Resource {
+  id           String        @id @default(cuid())
+  name         String
+  description  String?
+  type         ResourceType
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  reservations Reservation[]
+
+  @@map("resources")
+}
+
+model Reservation {
+  id         String            @id @default(cuid())
+  userId     String
+  resourceId String
+  startTime  DateTime
+  endTime    DateTime
+  status     ReservationStatus @default(CONFIRMED)
+  notes      String?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  user       User              @relation(fields: [userId], references: [id], onDelete: Restrict)
+  resource   Resource          @relation(fields: [resourceId], references: [id], onDelete: Restrict)
+
+  @@index([resourceId, startTime, endTime])
+  @@index([userId])
+  @@index([status])
+  @@map("reservations")
+}

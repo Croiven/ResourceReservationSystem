@@ -2,7 +2,7 @@
 
 A web application for browsing resources, viewing availability, and making reservations. This project is developed as part of a Master's thesis studying the structural quality and maintainability of software developed with AI assistance.
 
-At this stage, the repository contains only the technical foundation. Application features (users, resources, reservations, authentication, etc.) will be implemented in later iterations.
+The repository contains the technical foundation and initial database schema. Application features (authentication, resource browsing, reservation logic, admin UI, etc.) will be implemented in later iterations.
 
 ## Technology Stack
 
@@ -112,14 +112,81 @@ Expected response:
 DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/resource_reservation?schema=public"
 ```
 
-3. Generate the Prisma client:
+3. Run migrations and generate the Prisma client:
 
 ```bash
 cd backend
+npm run db:migrate
 npm run db:generate
 ```
 
-The application schema (users, resources, reservations) has not been created yet. Prisma is configured and ready for schema design in a future iteration.
+4. (Optional) Seed development data:
+
+```bash
+npm run db:seed
+```
+
+## Database Schema
+
+The schema is defined in `backend/prisma/schema.prisma` and applied via Prisma migrations.
+
+### Entities
+
+| Entity | Table | Description |
+|--------|-------|-------------|
+| `User` | `users` | Application users (regular users and administrators) |
+| `Resource` | `resources` | Bookable resources (rooms, equipment, vehicles, etc.) |
+| `Reservation` | `reservations` | Time-bound bookings linking a user to a resource |
+
+### Relationships
+
+- A **User** has many **Reservations**
+- A **Resource** has many **Reservations**
+- A **Reservation** belongs to one User and one Resource
+
+Foreign keys use `ON DELETE RESTRICT` to preserve reservation history. Users and resources are deactivated via `isActive` rather than hard deletion.
+
+### Enums
+
+| Enum | Values |
+|------|--------|
+| `UserRole` | `USER`, `ADMIN` |
+| `ResourceType` | `ROOM`, `EQUIPMENT`, `VEHICLE`, `OTHER` |
+| `ReservationStatus` | `PENDING`, `CONFIRMED`, `CANCELLED` |
+
+### Availability Rules
+
+Resources use an **exclusive reservation model** — only one active reservation per resource at a time.
+
+Overlap detection (to be implemented in the service layer):
+
+```
+existing.startTime < new.endTime AND existing.endTime > new.startTime
+```
+
+Only reservations with status `PENDING` or `CONFIRMED` block availability. `CANCELLED` reservations do not. Only resources with `isActive = true` are bookable.
+
+### Migrations
+
+Initial migration: `backend/prisma/migrations/20260915164700_init_schema/`
+
+```bash
+cd backend
+npm run db:migrate    # apply pending migrations
+npm run db:studio     # browse data in Prisma Studio
+npm run db:seed       # insert development seed data
+```
+
+### Seed Data
+
+The seed script creates:
+
+- Admin user: `admin@example.com` (role `ADMIN`)
+- Regular user: `user@example.com` (role `USER`)
+- Sample resources: Conference Room A, Portable Projector, Company Van
+- One sample reservation
+
+Dev password for all seed users: `password` (placeholder hash; auth not yet implemented).
 
 ## Testing
 
@@ -242,6 +309,7 @@ A SonarQube server is not required during initial setup. The configuration suppo
 | `npm run db:generate` | Generate Prisma client |
 | `npm run db:push` | Push schema to database |
 | `npm run db:migrate` | Run Prisma migrations |
+| `npm run db:seed` | Seed development data |
 | `npm run db:studio` | Open Prisma Studio |
 
 ## Environment Variables
