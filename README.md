@@ -2,13 +2,13 @@
 
 A web application for browsing resources, viewing availability, and making reservations. This project is developed as part of a Master's thesis studying the structural quality and maintainability of software developed with AI assistance.
 
-The repository contains the technical foundation and initial database schema. Application features (authentication, resource browsing, reservation logic, admin UI, etc.) will be implemented in later iterations.
+The repository contains a working backend API and a React frontend with login, registration, and profile pages. Resource browsing, reservation UI, and admin user management are planned for later iterations.
 
 ## Technology Stack
 
 | Layer | Technologies |
 |-------|-------------|
-| Frontend | React, TypeScript, Vite, ESLint, Vitest, Vitest Coverage |
+| Frontend | React, TypeScript, Vite, MUI, React Router, ESLint, Vitest, Vitest Coverage |
 | Backend | Node.js, TypeScript, Express, ESLint, Vitest, Vitest Coverage |
 | Database | PostgreSQL, Prisma ORM |
 | Development | Git, npm |
@@ -37,13 +37,15 @@ Supporting layers: `models/`, `validation/`, `middleware/`
 
 ### Frontend Architecture
 
-Component-based structure:
+Component-based structure with MUI as the shared UI library:
 
 ```
-components/   # Reusable UI components
-pages/        # Application-level views
-hooks/        # Reusable React logic
-services/     # Backend API communication
+components/   # Reusable UI components (AppLayout, AppHeader, ProtectedRoute)
+pages/        # Application-level views (Home, Login, Register, Profile)
+context/      # Auth state (AuthProvider)
+hooks/        # Reusable React logic (useAuth)
+services/     # Backend API communication (authApi, apiClient, tokenStorage)
+theme/        # MUI theme configuration
 types/        # Shared TypeScript types
 ```
 
@@ -62,6 +64,41 @@ npm run dev
 ```
 
 The frontend runs at [http://localhost:5173](http://localhost:5173). API requests to `/api/*` are proxied to the backend during development.
+
+### Frontend Authentication
+
+The frontend uses React Router for navigation, React Context for auth state, and MUI components throughout.
+
+| Route | Page | Access |
+|-------|------|--------|
+| `/` | Home | Public |
+| `/login` | Login | Public (redirects to `/profile` when logged in) |
+| `/register` | Register | Public (redirects when logged in) |
+| `/profile` | Profile | Protected |
+
+**Sign in with seed data** (after running `npm run db:seed` in the backend):
+
+- Email: `user@example.com`
+- Password: `password`
+
+**User flows:**
+
+1. **Register** — Creates an account via `POST /api/auth/register`, then redirects to login (no auto-login).
+2. **Login** — Stores access and refresh tokens in `localStorage`, fetches the current user, and redirects to `/profile`.
+3. **Profile** — Shows account details and a change-password form. A successful password change revokes all sessions and redirects to login.
+4. **Logout** — Revokes the refresh token and clears stored tokens.
+
+Protected routes use `ProtectedRoute`, which shows a loading indicator while auth state is bootstrapped from storage on app load. If the access token is expired, the app attempts a silent refresh before redirecting to login.
+
+**Frontend auth files:**
+
+| File | Purpose |
+|------|---------|
+| `frontend/src/context/AuthContext.tsx` | Auth provider (login, logout, register, changePassword) |
+| `frontend/src/services/authApi.ts` | Auth API calls |
+| `frontend/src/services/apiClient.ts` | Shared fetch wrapper with token refresh |
+| `frontend/src/services/tokenStorage.ts` | localStorage token helpers |
+| `frontend/src/theme/theme.ts` | MUI theme (project-wide) |
 
 ## Backend Setup
 
@@ -189,7 +226,7 @@ The seed script creates:
 - Sample resources: Conference Room A, Portable Projector, Company Van
 - One sample reservation
 
-Dev password for all seed users: `password` (placeholder hash; auth not yet implemented).
+Dev password for all seed users: `password`
 
 ## Testing
 
