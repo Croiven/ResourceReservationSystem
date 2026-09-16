@@ -137,6 +137,7 @@ The schema is defined in `backend/prisma/schema.prisma` and applied via Prisma m
 | `User` | `users` | Application users (regular users and administrators) |
 | `Resource` | `resources` | Bookable resources (rooms, equipment, vehicles, etc.) |
 | `Reservation` | `reservations` | Time-bound bookings linking a user to a resource |
+| `RefreshToken` | `refresh_tokens` | Hashed refresh tokens for JWT authentication |
 
 ### Relationships
 
@@ -169,6 +170,8 @@ Only reservations with status `PENDING` or `CONFIRMED` block availability. `CANC
 ### Migrations
 
 Initial migration: `backend/prisma/migrations/20260915164700_init_schema/`
+
+Refresh tokens migration: `backend/prisma/migrations/20260916154000_add_refresh_tokens/`
 
 ```bash
 cd backend
@@ -319,5 +322,71 @@ A SonarQube server is not required during initial setup. The configuration suppo
 | `PORT` | Backend server port | `3000` |
 | `NODE_ENV` | Environment mode | `development` |
 | `DATABASE_URL` | PostgreSQL connection string | (required) |
+| `JWT_ACCESS_SECRET` | Secret for signing access tokens | (required) |
+| `JWT_REFRESH_SECRET` | Secret for signing refresh tokens | (required) |
+| `JWT_ACCESS_EXPIRES_IN` | Access token TTL | `15m` |
+| `JWT_REFRESH_EXPIRES_IN` | Refresh token TTL | `7d` |
 
 Never commit `.env` files. Use `.env.example` as a template.
+
+## Authentication API
+
+Authentication uses JWT access + refresh tokens. Send access tokens via `Authorization: Bearer <token>` header.
+
+### Auth endpoints — `/api/auth`
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `POST` | `/register` | Public | Self-register as `USER` |
+| `POST` | `/login` | Public | Returns access + refresh token pair |
+| `POST` | `/refresh` | Public | Exchange refresh token for new token pair |
+| `POST` | `/logout` | Public | Revoke refresh token |
+| `GET` | `/me` | Authenticated | Current user profile |
+| `POST` | `/change-password` | Authenticated | Change password; revokes all refresh tokens |
+
+### User management — `/api/users` (admin only)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/` | List all users |
+| `GET` | `/:id` | Get user by ID |
+| `PATCH` | `/:id` | Update user (role, isActive, name) |
+| `DELETE` | `/:id` | Soft-deactivate user |
+
+### Resource endpoints — `/api/resources`
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/` | Public | List resources |
+| `GET` | `/:id` | Public | Get resource by ID |
+| `POST` | `/` | Admin | Create resource |
+| `PATCH` | `/:id` | Admin | Update resource |
+| `DELETE` | `/:id` | Admin | Deactivate resource |
+
+### Reservation endpoints — `/api/reservations`
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/` | Authenticated | List reservations (users see own; admins see all) |
+| `GET` | `/:id` | Authenticated | Get reservation (owner or admin) |
+| `POST` | `/` | Authenticated | Create reservation for authenticated user |
+| `PATCH` | `/:id` | Authenticated | Update reservation (owner or admin) |
+| `DELETE` | `/:id` | Authenticated | Cancel reservation (owner or admin) |
+
+### Example: login flow
+
+```bash
+# Register
+curl -X POST http://localhost:3000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"password123","firstName":"Regular","lastName":"User"}'
+
+# Login
+curl -X POST http://localhost:3000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"password123"}'
+
+# Use access token
+curl http://localhost:3000/api/auth/me \
+  -H "Authorization: Bearer <accessToken>"
+```
