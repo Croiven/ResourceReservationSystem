@@ -29,6 +29,20 @@ export default tseslint.config(
     },
   },
   {
+    files: ['src/validation/validate.middleware.ts'],
+    rules: {
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+    },
+  },
+  {
+    files: ['**/*.test.ts'],
+    rules: {
+      '@typescript-eslint/unbound-method': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+    },
+  },
+  {
     ignores: ['dist/**', 'coverage/**', 'node_modules/**'],
   },
 );

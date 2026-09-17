@@ -1,17 +1,18 @@
 import { PrismaClient, ResourceType, UserRole } from '@prisma/client';
+import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
-
-// Placeholder bcrypt hash for the dev password "password" — replace when auth is implemented.
-const DEV_PASSWORD_HASH = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
+const DEV_PASSWORD = 'password';
 
 async function main(): Promise<void> {
+  const passwordHash = await bcrypt.hash(DEV_PASSWORD, 12);
+
   const admin = await prisma.user.upsert({
     where: { email: 'admin@example.com' },
-    update: {},
+    update: { passwordHash },
     create: {
       email: 'admin@example.com',
-      passwordHash: DEV_PASSWORD_HASH,
+      passwordHash,
       firstName: 'Admin',
       lastName: 'User',
       role: UserRole.ADMIN,
@@ -20,10 +21,10 @@ async function main(): Promise<void> {
 
   const user = await prisma.user.upsert({
     where: { email: 'user@example.com' },
-    update: {},
+    update: { passwordHash },
     create: {
       email: 'user@example.com',
-      passwordHash: DEV_PASSWORD_HASH,
+      passwordHash,
       firstName: 'Regular',
       lastName: 'User',
       role: UserRole.USER,
@@ -87,7 +88,7 @@ async function main(): Promise<void> {
   console.log(`  Admin: ${admin.email}`);
   console.log(`  User: ${user.email}`);
   console.log(`  Resources: ${conferenceRoom.name}, ${projector.name}, ${companyVan.name}`);
-  console.log('  Dev password for all users: password');
+  console.log(`  Dev password for all users: ${DEV_PASSWORD}`);
 }
 
 main()

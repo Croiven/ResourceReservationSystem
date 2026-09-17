@@ -2,13 +2,13 @@
 
 A web application for browsing resources, viewing availability, and making reservations. This project is developed as part of a Master's thesis studying the structural quality and maintainability of software developed with AI assistance.
 
-The repository contains the technical foundation and initial database schema. Application features (authentication, resource browsing, reservation logic, admin UI, etc.) will be implemented in later iterations.
+The repository contains a working backend API and a React frontend with login, registration, and profile pages. Resource browsing, reservation UI, and admin user management are planned for later iterations.
 
 ## Technology Stack
 
 | Layer | Technologies |
 |-------|-------------|
-| Frontend | React, TypeScript, Vite, ESLint, Vitest, Vitest Coverage |
+| Frontend | React, TypeScript, Vite, MUI, React Router, ESLint, Vitest, Vitest Coverage |
 | Backend | Node.js, TypeScript, Express, ESLint, Vitest, Vitest Coverage |
 | Database | PostgreSQL, Prisma ORM |
 | Development | Git, npm |
@@ -37,13 +37,15 @@ Supporting layers: `models/`, `validation/`, `middleware/`
 
 ### Frontend Architecture
 
-Component-based structure:
+Component-based structure with MUI as the shared UI library:
 
 ```
-components/   # Reusable UI components
-pages/        # Application-level views
-hooks/        # Reusable React logic
-services/     # Backend API communication
+components/   # Reusable UI components (AppLayout, AppHeader, ProtectedRoute)
+pages/        # Application-level views (Home, Login, Register, Profile)
+context/      # Auth state (AuthProvider)
+hooks/        # Reusable React logic (useAuth)
+services/     # Backend API communication (authApi, apiClient, tokenStorage)
+theme/        # MUI theme configuration
 types/        # Shared TypeScript types
 ```
 
@@ -62,6 +64,41 @@ npm run dev
 ```
 
 The frontend runs at [http://localhost:5173](http://localhost:5173). API requests to `/api/*` are proxied to the backend during development.
+
+### Frontend Authentication
+
+The frontend uses React Router for navigation, React Context for auth state, and MUI components throughout.
+
+| Route | Page | Access |
+|-------|------|--------|
+| `/` | Home | Public |
+| `/login` | Login | Public (redirects to `/profile` when logged in) |
+| `/register` | Register | Public (redirects when logged in) |
+| `/profile` | Profile | Protected |
+
+**Sign in with seed data** (after running `npm run db:seed` in the backend):
+
+- Email: `user@example.com`
+- Password: `password`
+
+**User flows:**
+
+1. **Register** — Creates an account via `POST /api/auth/register`, then redirects to login (no auto-login).
+2. **Login** — Stores access and refresh tokens in `localStorage`, fetches the current user, and redirects to `/profile`.
+3. **Profile** — Shows account details and a change-password form. A successful password change revokes all sessions and redirects to login.
+4. **Logout** — Revokes the refresh token and clears stored tokens.
+
+Protected routes use `ProtectedRoute`, which shows a loading indicator while auth state is bootstrapped from storage on app load. If the access token is expired, the app attempts a silent refresh before redirecting to login.
+
+**Frontend auth files:**
+
+| File | Purpose |
+|------|---------|
+| `frontend/src/context/AuthContext.tsx` | Auth provider (login, logout, register, changePassword) |
+| `frontend/src/services/authApi.ts` | Auth API calls |
+| `frontend/src/services/apiClient.ts` | Shared fetch wrapper with token refresh |
+| `frontend/src/services/tokenStorage.ts` | localStorage token helpers |
+| `frontend/src/theme/theme.ts` | MUI theme (project-wide) |
 
 ## Backend Setup
 
@@ -137,6 +174,7 @@ The schema is defined in `backend/prisma/schema.prisma` and applied via Prisma m
 | `User` | `users` | Application users (regular users and administrators) |
 | `Resource` | `resources` | Bookable resources (rooms, equipment, vehicles, etc.) |
 | `Reservation` | `reservations` | Time-bound bookings linking a user to a resource |
+| `RefreshToken` | `refresh_tokens` | Hashed refresh tokens for JWT authentication |
 
 ### Relationships
 
@@ -170,6 +208,8 @@ Only reservations with status `PENDING` or `CONFIRMED` block availability. `CANC
 
 Initial migration: `backend/prisma/migrations/20260915164700_init_schema/`
 
+Refresh tokens migration: `backend/prisma/migrations/20260916154000_add_refresh_tokens/`
+
 ```bash
 cd backend
 npm run db:migrate    # apply pending migrations
@@ -186,7 +226,7 @@ The seed script creates:
 - Sample resources: Conference Room A, Portable Projector, Company Van
 - One sample reservation
 
-Dev password for all seed users: `password` (placeholder hash; auth not yet implemented).
+Dev password for all seed users: `password`
 
 ## Testing
 
@@ -319,5 +359,71 @@ A SonarQube server is not required during initial setup. The configuration suppo
 | `PORT` | Backend server port | `3000` |
 | `NODE_ENV` | Environment mode | `development` |
 | `DATABASE_URL` | PostgreSQL connection string | (required) |
+| `JWT_ACCESS_SECRET` | Secret for signing access tokens | (required) |
+| `JWT_REFRESH_SECRET` | Secret for signing refresh tokens | (required) |
+| `JWT_ACCESS_EXPIRES_IN` | Access token TTL | `15m` |
+| `JWT_REFRESH_EXPIRES_IN` | Refresh token TTL | `7d` |
 
 Never commit `.env` files. Use `.env.example` as a template.
+
+## Authentication API
+
+Authentication uses JWT access + refresh tokens. Send access tokens via `Authorization: Bearer <token>` header.
+
+### Auth endpoints — `/api/auth`
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `POST` | `/register` | Public | Self-register as `USER` |
+| `POST` | `/login` | Public | Returns access + refresh token pair |
+| `POST` | `/refresh` | Public | Exchange refresh token for new token pair |
+| `POST` | `/logout` | Public | Revoke refresh token |
+| `GET` | `/me` | Authenticated | Current user profile |
+| `POST` | `/change-password` | Authenticated | Change password; revokes all refresh tokens |
+
+### User management — `/api/users` (admin only)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/` | List all users |
+| `GET` | `/:id` | Get user by ID |
+| `PATCH` | `/:id` | Update user (role, isActive, name) |
+| `DELETE` | `/:id` | Soft-deactivate user |
+
+### Resource endpoints — `/api/resources`
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/` | Public | List resources |
+| `GET` | `/:id` | Public | Get resource by ID |
+| `POST` | `/` | Admin | Create resource |
+| `PATCH` | `/:id` | Admin | Update resource |
+| `DELETE` | `/:id` | Admin | Deactivate resource |
+
+### Reservation endpoints — `/api/reservations`
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/` | Authenticated | List reservations (users see own; admins see all) |
+| `GET` | `/:id` | Authenticated | Get reservation (owner or admin) |
+| `POST` | `/` | Authenticated | Create reservation for authenticated user |
+| `PATCH` | `/:id` | Authenticated | Update reservation (owner or admin) |
+| `DELETE` | `/:id` | Authenticated | Cancel reservation (owner or admin) |
+
+### Example: login flow
+
+```bash
+# Register
+curl -X POST http://localhost:3000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"password123","firstName":"Regular","lastName":"User"}'
+
+# Login
+curl -X POST http://localhost:3000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"password123"}'
+
+# Use access token
+curl http://localhost:3000/api/auth/me \
+  -H "Authorization: Bearer <accessToken>"
+```
