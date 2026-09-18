@@ -24,6 +24,8 @@ export const resourceIdParamSchema = z.object({
 
 export const listResourcesQuerySchema = z.object({
   active: z.enum(['true', 'false']).optional(),
+  type: z.nativeEnum(ResourceType).optional(),
+  search: z.string().trim().min(1).max(100).optional(),
 });
 
 export type CreateResourceInput = z.infer<typeof createResourceSchema>;

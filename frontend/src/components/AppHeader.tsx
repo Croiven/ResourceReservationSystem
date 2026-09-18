@@ -29,6 +29,9 @@ export function AppHeader() {
           <Button color="inherit" component={RouterLink} to="/">
             Home
           </Button>
+          <Button color="inherit" component={RouterLink} to="/resources">
+            Resources
+          </Button>
           {isAuthenticated ? (
             <>
               <Button color="inherit" component={RouterLink} to="/profile">

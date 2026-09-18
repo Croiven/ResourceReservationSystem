@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { asyncHandler } from '../middleware/async-handler.middleware.js';
 import type { AuthenticatedRequest } from '../models/auth.model.js';
 import { reservationService } from '../services/reservation.service.js';
+import { getValidated } from '../validation/validate.middleware.js';
 import type {
   CreateReservationInput,
   ListReservationsQuery,
@@ -11,7 +12,7 @@ import type {
 export class ReservationController {
   list = asyncHandler(async (req: Request, res: Response) => {
     const authReq = req as AuthenticatedRequest;
-    const query = req.query as ListReservationsQuery;
+    const query = getValidated<ListReservationsQuery>(req, 'query');
     const reservations = await reservationService.listReservations(
       query,
       authReq.user.id,
@@ -22,8 +23,9 @@ export class ReservationController {
 
   getById = asyncHandler(async (req: Request, res: Response) => {
     const authReq = req as AuthenticatedRequest;
+    const { id } = getValidated<{ id: string }>(req, 'params');
     const reservation = await reservationService.getReservation(
-      req.params['id'] as string,
+      id,
       authReq.user.id,
       authReq.user.role,
     );
@@ -32,16 +34,17 @@ export class ReservationController {
 
   create = asyncHandler(async (req: Request, res: Response) => {
     const authReq = req as AuthenticatedRequest;
-    const data = req.body as CreateReservationInput;
+    const data = getValidated<CreateReservationInput>(req, 'body');
     const reservation = await reservationService.createReservation(data, authReq.user.id);
     res.status(201).json({ data: reservation });
   });
 
   update = asyncHandler(async (req: Request, res: Response) => {
     const authReq = req as AuthenticatedRequest;
-    const data = req.body as UpdateReservationInput;
+    const data = getValidated<UpdateReservationInput>(req, 'body');
+    const { id } = getValidated<{ id: string }>(req, 'params');
     const reservation = await reservationService.updateReservation(
-      req.params['id'] as string,
+      id,
       data,
       authReq.user.id,
       authReq.user.role,
@@ -51,8 +54,9 @@ export class ReservationController {
 
   cancel = asyncHandler(async (req: Request, res: Response) => {
     const authReq = req as AuthenticatedRequest;
+    const { id } = getValidated<{ id: string }>(req, 'params');
     const reservation = await reservationService.cancelReservation(
-      req.params['id'] as string,
+      id,
       authReq.user.id,
       authReq.user.role,
     );
