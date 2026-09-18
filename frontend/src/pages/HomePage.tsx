@@ -22,9 +22,12 @@ export function HomePage() {
               Browse resources, view availability, and make reservations. Sign in to manage your
               bookings or register a new account.
             </Typography>
-            <Stack direction="row" spacing={2}>
+            <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap' }}>
+              <Button variant="contained" component={RouterLink} to="/resources">
+                Browse resources
+              </Button>
               {isAuthenticated ? (
-                <Button variant="contained" component={RouterLink} to="/profile">
+                <Button variant="outlined" component={RouterLink} to="/profile">
                   View profile
                 </Button>
               ) : (

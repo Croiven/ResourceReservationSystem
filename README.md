@@ -2,7 +2,7 @@
 
 A web application for browsing resources, viewing availability, and making reservations. This project is developed as part of a Master's thesis studying the structural quality and maintainability of software developed with AI assistance.
 
-The repository contains a working backend API and a React frontend with login, registration, and profile pages. Resource browsing, reservation UI, and admin user management are planned for later iterations.
+The repository contains a working backend API and a React frontend with login, registration, profile, and resource browse pages. Reservation UI and admin resource management UI are planned for later iterations.
 
 ## Technology Stack
 
@@ -75,6 +75,8 @@ The frontend uses React Router for navigation, React Context for auth state, and
 | `/login` | Login | Public (redirects to `/profile` when logged in) |
 | `/register` | Register | Public (redirects when logged in) |
 | `/profile` | Profile | Protected |
+| `/resources` | Resources | Public |
+| `/resources/:id` | Resource detail | Public |
 
 **Sign in with seed data** (after running `npm run db:seed` in the backend):
 
@@ -99,6 +101,27 @@ Protected routes use `ProtectedRoute`, which shows a loading indicator while aut
 | `frontend/src/services/apiClient.ts` | Shared fetch wrapper with token refresh |
 | `frontend/src/services/tokenStorage.ts` | localStorage token helpers |
 | `frontend/src/theme/theme.ts` | MUI theme (project-wide) |
+
+### Frontend Resource Browse
+
+The browse UI at `/resources` lets anyone list and inspect bookable resources. No login is required.
+
+**Features:**
+
+- Search by name or description (debounced, server-side)
+- Filter by resource type (`ROOM`, `EQUIPMENT`, `VEHICLE`, `OTHER`)
+- Filter by status (defaults to active resources only)
+- Click a row to open the detail page at `/resources/:id`
+
+**Frontend resource files:**
+
+| File | Purpose |
+|------|---------|
+| `frontend/src/pages/ResourcesPage.tsx` | Browse list with search and filters |
+| `frontend/src/pages/ResourceDetailPage.tsx` | Single resource detail view |
+| `frontend/src/services/resourceApi.ts` | Resource API calls |
+| `frontend/src/types/resource.ts` | Resource types |
+| `frontend/src/utils/resourceLabels.ts` | Display labels for resource types |
 
 ## Backend Setup
 
@@ -394,11 +417,25 @@ Authentication uses JWT access + refresh tokens. Send access tokens via `Authori
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `GET` | `/` | Public | List resources |
+| `GET` | `/` | Public | List resources (supports query filters) |
 | `GET` | `/:id` | Public | Get resource by ID |
 | `POST` | `/` | Admin | Create resource |
 | `PATCH` | `/:id` | Admin | Update resource |
 | `DELETE` | `/:id` | Admin | Deactivate resource |
+
+**List query parameters** (`GET /api/resources`):
+
+| Param | Values | Description |
+|-------|--------|-------------|
+| `active` | `true`, `false` | Filter by active status |
+| `type` | `ROOM`, `EQUIPMENT`, `VEHICLE`, `OTHER` | Filter by resource type |
+| `search` | string (1–100 chars) | Case-insensitive match on name or description |
+
+Example:
+
+```bash
+curl "http://localhost:3000/api/resources?active=true&type=ROOM&search=conference"
+```
 
 ### Reservation endpoints — `/api/reservations`
 

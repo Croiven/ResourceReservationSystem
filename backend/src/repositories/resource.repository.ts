@@ -16,11 +16,24 @@ export interface UpdateResourceData {
 
 export interface ResourceFilters {
   isActive?: boolean;
+  type?: ResourceType;
+  search?: string;
 }
 
 export class ResourceRepository {
   async findAll(filters?: ResourceFilters): Promise<Resource[]> {
-    const where = filters?.isActive !== undefined ? { isActive: filters.isActive } : {};
+    const where = {
+      ...(filters?.isActive !== undefined ? { isActive: filters.isActive } : {}),
+      ...(filters?.type !== undefined ? { type: filters.type } : {}),
+      ...(filters?.search !== undefined
+        ? {
+            OR: [
+              { name: { contains: filters.search, mode: 'insensitive' as const } },
+              { description: { contains: filters.search, mode: 'insensitive' as const } },
+            ],
+          }
+        : {}),
+    };
     return prisma.resource.findMany({
       where,
       orderBy: { name: 'asc' },

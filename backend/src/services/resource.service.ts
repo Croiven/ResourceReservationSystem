@@ -10,9 +10,14 @@ import { NotFoundError } from '../middleware/error.middleware.js';
 
 export class ResourceService {
   async listResources(query: ListResourcesQuery): Promise<ResourceResponse[]> {
-    const filters =
-      query.active !== undefined ? { isActive: query.active === 'true' } : undefined;
-    const resources = await resourceRepository.findAll(filters);
+    const filters = {
+      ...(query.active !== undefined ? { isActive: query.active === 'true' } : {}),
+      ...(query.type !== undefined ? { type: query.type } : {}),
+      ...(query.search !== undefined ? { search: query.search } : {}),
+    };
+    const resources = await resourceRepository.findAll(
+      Object.keys(filters).length > 0 ? filters : undefined,
+    );
     return resources.map(toResourceResponse);
   }
 
