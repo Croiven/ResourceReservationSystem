@@ -55,4 +55,32 @@ describe('AppHeader', () => {
     expect(screen.getByRole('link', { name: /profile/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /logout/i })).toBeInTheDocument();
   });
+
+  it('renders admin links for admin users', () => {
+    vi.mocked(useAuth).mockReturnValue({
+      user: {
+        id: '1',
+        email: 'admin@example.com',
+        firstName: 'Admin',
+        lastName: 'User',
+        role: 'ADMIN',
+        isActive: true,
+        createdAt: '',
+        updatedAt: '',
+      },
+      isAuthenticated: true,
+      isLoading: false,
+      login: vi.fn(),
+      register: vi.fn(),
+      logout: vi.fn(),
+      changePassword: vi.fn(),
+      refreshUser: vi.fn(),
+    });
+
+    renderWithProviders(<AppHeader />);
+
+    expect(screen.getByRole('link', { name: /manage resources/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /manage users/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /all reservations/i })).toBeInTheDocument();
+  });
 });

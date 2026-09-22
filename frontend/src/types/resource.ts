@@ -15,3 +15,16 @@ export interface ListResourcesQuery {
   type?: ResourceType;
   search?: string;
 }
+
+export interface CreateResourceInput {
+  name: string;
+  description?: string;
+  type: ResourceType;
+}
+
+export interface UpdateResourceInput {
+  name?: string;
+  description?: string | null;
+  type?: ResourceType;
+  isActive?: boolean;
+}

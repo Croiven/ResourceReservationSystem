@@ -8,7 +8,7 @@ import { AppLayout } from '../components/AppLayout';
 import { useAuth } from '../hooks/useAuth';
 
 export function HomePage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
   return (
     <AppLayout>
@@ -34,6 +34,19 @@ export function HomePage() {
                   <Button variant="outlined" component={RouterLink} to="/profile">
                     View profile
                   </Button>
+                  {user?.role === 'ADMIN' && (
+                    <>
+                      <Button variant="outlined" component={RouterLink} to="/admin/resources">
+                        Manage resources
+                      </Button>
+                      <Button variant="outlined" component={RouterLink} to="/admin/users">
+                        Manage users
+                      </Button>
+                      <Button variant="outlined" component={RouterLink} to="/admin/reservations">
+                        All reservations
+                      </Button>
+                    </>
+                  )}
                 </>
               ) : (
                 <>

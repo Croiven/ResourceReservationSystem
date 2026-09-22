@@ -7,6 +7,7 @@ import { resourceRepository } from '../repositories/resource.repository.js';
 import { userRepository } from '../repositories/user.repository.js';
 import type { ReservationFilters } from '../repositories/reservation.repository.js';
 import type {
+  AdminListReservationsQuery,
   CreateReservationInput,
   ListReservationsQuery,
   UpdateReservationInput,
@@ -29,6 +30,17 @@ export class ReservationService {
       userId: requesterId,
     };
 
+    if (query.resourceId !== undefined) filters.resourceId = query.resourceId;
+    if (query.status !== undefined) filters.status = query.status;
+
+    const reservations = await reservationRepository.findAll(filters);
+    return reservations.map(toReservationResponse);
+  }
+
+  async listAllReservations(query: AdminListReservationsQuery): Promise<ReservationResponse[]> {
+    const filters: ReservationFilters = {};
+
+    if (query.userId !== undefined) filters.userId = query.userId;
     if (query.resourceId !== undefined) filters.resourceId = query.resourceId;
     if (query.status !== undefined) filters.status = query.status;
 

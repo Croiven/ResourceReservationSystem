@@ -1,6 +1,11 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { AdminRoute } from './components/AdminRoute';
 import { GuestRoute } from './components/GuestRoute';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { AdminReservationDetailPage } from './pages/AdminReservationDetailPage';
+import { AdminReservationsPage } from './pages/AdminReservationsPage';
+import { AdminResourcesPage } from './pages/AdminResourcesPage';
+import { AdminUsersPage } from './pages/AdminUsersPage';
 import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
 import { ProfilePage } from './pages/ProfilePage';
@@ -55,6 +60,38 @@ export function App() {
             <ProtectedRoute>
               <ReservationDetailPage />
             </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/resources"
+          element={
+            <AdminRoute>
+              <AdminResourcesPage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/users"
+          element={
+            <AdminRoute>
+              <AdminUsersPage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/reservations"
+          element={
+            <AdminRoute>
+              <AdminReservationsPage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/reservations/:id"
+          element={
+            <AdminRoute>
+              <AdminReservationDetailPage />
+            </AdminRoute>
           }
         />
       </Routes>

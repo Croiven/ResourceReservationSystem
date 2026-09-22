@@ -43,6 +43,12 @@ export interface ListReservationsQuery {
   status?: ReservationStatus;
 }
 
+export interface AdminListReservationsQuery {
+  userId?: string;
+  resourceId?: string;
+  status?: ReservationStatus;
+}
+
 export interface ResourceBooking {
   startTime: string;
   endTime: string;

@@ -169,6 +169,30 @@ describe('ReservationService', () => {
     expect(reservationRepository.findAll).toHaveBeenCalledWith({ userId: 'admin-1' });
   });
 
+  it('lists all reservations for admin without forcing userId', async () => {
+    vi.mocked(reservationRepository.findAll).mockResolvedValue([mockReservation]);
+
+    await reservationService.listAllReservations({});
+
+    expect(reservationRepository.findAll).toHaveBeenCalledWith({});
+  });
+
+  it('applies filters for admin list reservations', async () => {
+    vi.mocked(reservationRepository.findAll).mockResolvedValue([mockReservation]);
+
+    await reservationService.listAllReservations({
+      userId: 'user-1',
+      resourceId: 'resource-1',
+      status: ReservationStatus.CONFIRMED,
+    });
+
+    expect(reservationRepository.findAll).toHaveBeenCalledWith({
+      userId: 'user-1',
+      resourceId: 'resource-1',
+      status: ReservationStatus.CONFIRMED,
+    });
+  });
+
   it('applies status filter for regular users scoped to own userId', async () => {
     vi.mocked(reservationRepository.findAll).mockResolvedValue([mockReservation]);
 

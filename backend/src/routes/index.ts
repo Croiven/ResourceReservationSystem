@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { adminRouter } from './admin.routes.js';
 import { authRouter } from './auth.routes.js';
 import { healthRouter } from './health.routes.js';
 import { reservationRouter } from './reservation.routes.js';
@@ -8,6 +9,7 @@ import { userRouter } from './user.routes.js';
 const router = Router();
 
 router.use(healthRouter);
+router.use('/admin', adminRouter);
 router.use('/auth', authRouter);
 router.use('/users', userRouter);
 router.use('/resources', resourceRouter);
