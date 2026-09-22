@@ -38,7 +38,7 @@ describe('ReservationsPage', () => {
     renderWithProviders(<ReservationsPage />);
 
     expect(await screen.findByText('My Reservations')).toBeInTheDocument();
-    expect(screen.getByText('Conference Room A')).toBeInTheDocument();
+    expect(await screen.findByText('Conference Room A')).toBeInTheDocument();
   });
 
   it('shows empty state when user has no reservations', async () => {
