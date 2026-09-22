@@ -28,6 +28,19 @@ export const listResourcesQuerySchema = z.object({
   search: z.string().trim().min(1).max(100).optional(),
 });
 
+export const resourceAvailabilityQuerySchema = z.object({
+  startTime: z.string().datetime(),
+  endTime: z.string().datetime(),
+  excludeReservationId: z.string().min(1).optional(),
+});
+
+export const resourceBookingsQuerySchema = z.object({
+  from: z.string().datetime(),
+  to: z.string().datetime(),
+});
+
 export type CreateResourceInput = z.infer<typeof createResourceSchema>;
 export type UpdateResourceInput = z.infer<typeof updateResourceSchema>;
 export type ListResourcesQuery = z.infer<typeof listResourcesQuerySchema>;
+export type ResourceAvailabilityQuery = z.infer<typeof resourceAvailabilityQuerySchema>;
+export type ResourceBookingsQuery = z.infer<typeof resourceBookingsQuerySchema>;

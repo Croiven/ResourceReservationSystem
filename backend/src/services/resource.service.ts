@@ -1,12 +1,26 @@
 import type { ResourceResponse } from '../models/resource.dto.js';
 import { toResourceResponse } from '../models/resource.dto.js';
+import { reservationRepository } from '../repositories/reservation.repository.js';
 import { resourceRepository } from '../repositories/resource.repository.js';
 import type {
   CreateResourceInput,
   ListResourcesQuery,
+  ResourceAvailabilityQuery,
+  ResourceBookingsQuery,
   UpdateResourceInput,
 } from '../validation/resource.validation.js';
-import { NotFoundError } from '../middleware/error.middleware.js';
+import { isValidSlotRange } from '../lib/slot-time.js';
+import { NotFoundError, ValidationError } from '../middleware/error.middleware.js';
+
+export interface ResourceBookingSlot {
+  startTime: Date;
+  endTime: Date;
+  status: 'PENDING' | 'CONFIRMED' | 'CANCELLED';
+}
+
+export interface AvailabilityResult {
+  available: boolean;
+}
 
 export class ResourceService {
   async listResources(query: ListResourcesQuery): Promise<ResourceResponse[]> {
@@ -61,6 +75,56 @@ export class ResourceService {
     }
     const deactivated = await resourceRepository.deactivate(id);
     return toResourceResponse(deactivated);
+  }
+
+  async getResourceBookings(
+    id: string,
+    query: ResourceBookingsQuery,
+  ): Promise<ResourceBookingSlot[]> {
+    const resource = await resourceRepository.findById(id);
+    if (!resource) {
+      throw new NotFoundError('Resource not found');
+    }
+
+    const from = new Date(query.from);
+    const to = new Date(query.to);
+    return reservationRepository.findBookingsInRange(id, from, to);
+  }
+
+  async checkAvailability(
+    id: string,
+    query: ResourceAvailabilityQuery,
+  ): Promise<AvailabilityResult> {
+    const resource = await resourceRepository.findById(id);
+    if (!resource) {
+      throw new NotFoundError('Resource not found');
+    }
+
+    if (!resource.isActive) {
+      return { available: false };
+    }
+
+    const startTime = new Date(query.startTime);
+    const endTime = new Date(query.endTime);
+
+    if (!isValidSlotRange(startTime, endTime)) {
+      throw new ValidationError(
+        'Reservations must start on the hour or half-hour and last a multiple of 30 minutes',
+      );
+    }
+
+    if (startTime < new Date()) {
+      return { available: false };
+    }
+
+    const overlap = await reservationRepository.findOverlapping(
+      id,
+      startTime,
+      endTime,
+      query.excludeReservationId,
+    );
+
+    return { available: overlap === null };
   }
 }
 

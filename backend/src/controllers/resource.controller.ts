@@ -5,6 +5,8 @@ import { getValidated } from '../validation/validate.middleware.js';
 import type {
   CreateResourceInput,
   ListResourcesQuery,
+  ResourceAvailabilityQuery,
+  ResourceBookingsQuery,
   UpdateResourceInput,
 } from '../validation/resource.validation.js';
 
@@ -13,6 +15,20 @@ export class ResourceController {
     const query = getValidated<ListResourcesQuery>(req, 'query');
     const resources = await resourceService.listResources(query);
     res.status(200).json({ data: resources });
+  });
+
+  getBookings = asyncHandler(async (req, res: Response) => {
+    const { id } = getValidated<{ id: string }>(req, 'params');
+    const query = getValidated<ResourceBookingsQuery>(req, 'query');
+    const bookings = await resourceService.getResourceBookings(id, query);
+    res.status(200).json({ data: bookings });
+  });
+
+  checkAvailability = asyncHandler(async (req, res: Response) => {
+    const { id } = getValidated<{ id: string }>(req, 'params');
+    const query = getValidated<ResourceAvailabilityQuery>(req, 'query');
+    const result = await resourceService.checkAvailability(id, query);
+    res.status(200).json({ data: result });
   });
 
   getById = asyncHandler(async (req, res: Response) => {

@@ -34,6 +34,9 @@ export function AppHeader() {
           </Button>
           {isAuthenticated ? (
             <>
+              <Button color="inherit" component={RouterLink} to="/reservations">
+                My reservations
+              </Button>
               <Button color="inherit" component={RouterLink} to="/profile">
                 Profile
               </Button>

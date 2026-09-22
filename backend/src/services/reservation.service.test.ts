@@ -101,6 +101,32 @@ describe('ReservationService', () => {
     ).rejects.toThrow(ConflictError);
   });
 
+  it('rejects reservation when times are not on 30-minute slots', async () => {
+    await expect(
+      reservationService.createReservation(
+        {
+          resourceId: 'resource-1',
+          startTime: '2030-01-01T10:15:00.000Z',
+          endTime: '2030-01-01T11:00:00.000Z',
+        },
+        'user-1',
+      ),
+    ).rejects.toThrow(ValidationError);
+  });
+
+  it('rejects reservation when duration is not a multiple of 30 minutes', async () => {
+    await expect(
+      reservationService.createReservation(
+        {
+          resourceId: 'resource-1',
+          startTime: '2030-01-01T10:00:00.000Z',
+          endTime: '2030-01-01T10:45:00.000Z',
+        },
+        'user-1',
+      ),
+    ).rejects.toThrow(ValidationError);
+  });
+
   it('rejects reservation when end time is before start time', async () => {
     await expect(
       reservationService.createReservation(
@@ -114,11 +140,123 @@ describe('ReservationService', () => {
     ).rejects.toThrow(ValidationError);
   });
 
+  it('rejects reservation when start time is in the past', async () => {
+    await expect(
+      reservationService.createReservation(
+        {
+          resourceId: 'resource-1',
+          startTime: '2020-01-01T10:00:00.000Z',
+          endTime: '2020-01-01T11:00:00.000Z',
+        },
+        'user-1',
+      ),
+    ).rejects.toThrow(ValidationError);
+  });
+
   it('lists only own reservations for regular users', async () => {
     vi.mocked(reservationRepository.findAll).mockResolvedValue([mockReservation]);
 
     await reservationService.listReservations({}, 'user-1', UserRole.USER);
 
     expect(reservationRepository.findAll).toHaveBeenCalledWith({ userId: 'user-1' });
+  });
+
+  it('lists only own reservations for admins on the user list endpoint', async () => {
+    vi.mocked(reservationRepository.findAll).mockResolvedValue([mockReservation]);
+
+    await reservationService.listReservations({}, 'admin-1', UserRole.ADMIN);
+
+    expect(reservationRepository.findAll).toHaveBeenCalledWith({ userId: 'admin-1' });
+  });
+
+  it('applies status filter for regular users scoped to own userId', async () => {
+    vi.mocked(reservationRepository.findAll).mockResolvedValue([mockReservation]);
+
+    await reservationService.listReservations(
+      { status: ReservationStatus.CONFIRMED },
+      'user-1',
+      UserRole.USER,
+    );
+
+    expect(reservationRepository.findAll).toHaveBeenCalledWith({
+      userId: 'user-1',
+      status: ReservationStatus.CONFIRMED,
+    });
+  });
+
+  it('updates reservation when rescheduling without overlap', async () => {
+    vi.mocked(reservationRepository.findById).mockResolvedValue(mockReservation);
+    vi.mocked(userRepository.existsActive).mockResolvedValue(true);
+    vi.mocked(resourceRepository.findById).mockResolvedValue({
+      id: 'resource-1',
+      name: 'Room A',
+      description: null,
+      type: ResourceType.ROOM,
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    vi.mocked(reservationRepository.findOverlapping).mockResolvedValue(null);
+    vi.mocked(reservationRepository.update).mockResolvedValue({
+      ...mockReservation,
+      startTime: new Date('2030-01-01T12:00:00Z'),
+      endTime: new Date('2030-01-01T13:00:00Z'),
+    });
+
+    const result = await reservationService.updateReservation(
+      'res-1',
+      {
+        startTime: '2030-01-01T12:00:00.000Z',
+        endTime: '2030-01-01T13:00:00.000Z',
+      },
+      'user-1',
+      UserRole.USER,
+    );
+
+    expect(result.startTime).toEqual(new Date('2030-01-01T12:00:00Z'));
+    expect(reservationRepository.findOverlapping).toHaveBeenCalledWith(
+      'resource-1',
+      new Date('2030-01-01T12:00:00.000Z'),
+      new Date('2030-01-01T13:00:00.000Z'),
+      'res-1',
+    );
+  });
+
+  it('rejects update on cancelled reservation', async () => {
+    vi.mocked(reservationRepository.findById).mockResolvedValue({
+      ...mockReservation,
+      status: ReservationStatus.CANCELLED,
+    });
+
+    await expect(
+      reservationService.updateReservation(
+        'res-1',
+        { notes: 'Updated' },
+        'user-1',
+        UserRole.USER,
+      ),
+    ).rejects.toThrow(ValidationError);
+  });
+
+  it('cancel is idempotent for already cancelled reservations', async () => {
+    const cancelled = { ...mockReservation, status: ReservationStatus.CANCELLED };
+    vi.mocked(reservationRepository.findById).mockResolvedValue(cancelled);
+
+    const result = await reservationService.cancelReservation('res-1', 'user-1', UserRole.USER);
+
+    expect(result.status).toBe(ReservationStatus.CANCELLED);
+    expect(reservationRepository.update).not.toHaveBeenCalled();
+  });
+
+  it('cancels an active reservation', async () => {
+    vi.mocked(reservationRepository.findById).mockResolvedValue(mockReservation);
+    vi.mocked(reservationRepository.update).mockResolvedValue({
+      ...mockReservation,
+      status: ReservationStatus.CANCELLED,
+    });
+
+    const result = await reservationService.cancelReservation('res-1', 'user-1', UserRole.USER);
+
+    expect(result.status).toBe(ReservationStatus.CANCELLED);
   });
 });

@@ -1,3 +1,4 @@
+import type { AvailabilityResult, ResourceBooking } from '../types/reservation';
 import type { ListResourcesQuery, Resource } from '../types/resource';
 import { apiRequest } from './apiClient';
 
@@ -27,4 +28,26 @@ export async function listResources(query?: ListResourcesQuery): Promise<Resourc
 
 export async function getResource(id: string): Promise<Resource> {
   return apiRequest<Resource>(`/resources/${id}`);
+}
+
+export async function getResourceBookings(
+  id: string,
+  from: string,
+  to: string,
+): Promise<ResourceBooking[]> {
+  const params = new URLSearchParams({ from, to });
+  return apiRequest<ResourceBooking[]>(`/resources/${id}/bookings?${params.toString()}`);
+}
+
+export async function checkAvailability(
+  id: string,
+  startTime: string,
+  endTime: string,
+  excludeReservationId?: string,
+): Promise<AvailabilityResult> {
+  const params = new URLSearchParams({ startTime, endTime });
+  if (excludeReservationId) {
+    params.set('excludeReservationId', excludeReservationId);
+  }
+  return apiRequest<AvailabilityResult>(`/resources/${id}/availability?${params.toString()}`);
 }

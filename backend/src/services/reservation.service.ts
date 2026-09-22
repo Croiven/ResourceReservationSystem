@@ -11,6 +11,7 @@ import type {
   ListReservationsQuery,
   UpdateReservationInput,
 } from '../validation/reservation.validation.js';
+import { isValidSlotRange } from '../lib/slot-time.js';
 import {
   ConflictError,
   ForbiddenError,
@@ -22,17 +23,14 @@ export class ReservationService {
   async listReservations(
     query: ListReservationsQuery,
     requesterId: string,
-    requesterRole: UserRole,
+    _requesterRole: UserRole,
   ): Promise<ReservationResponse[]> {
-    const filters: ReservationFilters = {};
+    const filters: ReservationFilters = {
+      userId: requesterId,
+    };
 
-    if (requesterRole !== 'ADMIN') {
-      filters.userId = requesterId;
-    } else {
-      if (query.userId !== undefined) filters.userId = query.userId;
-      if (query.resourceId !== undefined) filters.resourceId = query.resourceId;
-      if (query.status !== undefined) filters.status = query.status;
-    }
+    if (query.resourceId !== undefined) filters.resourceId = query.resourceId;
+    if (query.status !== undefined) filters.status = query.status;
 
     const reservations = await reservationRepository.findAll(filters);
     return reservations.map(toReservationResponse);
@@ -86,6 +84,10 @@ export class ReservationService {
 
     this.assertOwnerOrAdmin(reservation.userId, requesterId, requesterRole);
 
+    if (reservation.status === ReservationStatus.CANCELLED) {
+      throw new ValidationError('Cannot update a cancelled reservation');
+    }
+
     const startTime = data.startTime ? new Date(data.startTime) : reservation.startTime;
     const endTime = data.endTime ? new Date(data.endTime) : reservation.endTime;
 
@@ -122,6 +124,10 @@ export class ReservationService {
 
     this.assertOwnerOrAdmin(reservation.userId, requesterId, requesterRole);
 
+    if (reservation.status === ReservationStatus.CANCELLED) {
+      return toReservationResponse(reservation);
+    }
+
     const cancelled = await reservationRepository.update(id, {
       status: ReservationStatus.CANCELLED,
     });
@@ -144,6 +150,16 @@ export class ReservationService {
   ): Promise<void> {
     if (endTime <= startTime) {
       throw new ValidationError('End time must be after start time');
+    }
+
+    if (!isValidSlotRange(startTime, endTime)) {
+      throw new ValidationError(
+        'Reservations must start on the hour or half-hour and last a multiple of 30 minutes',
+      );
+    }
+
+    if (startTime < new Date()) {
+      throw new ValidationError('Start time must be in the future');
     }
 
     const userActive = await userRepository.existsActive(userId);

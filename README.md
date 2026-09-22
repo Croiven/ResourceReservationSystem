@@ -2,7 +2,7 @@
 
 A web application for browsing resources, viewing availability, and making reservations. This project is developed as part of a Master's thesis studying the structural quality and maintainability of software developed with AI assistance.
 
-The repository contains a working backend API and a React frontend with login, registration, profile, and resource browse pages. Reservation UI and admin resource management UI are planned for later iterations.
+The repository contains a working backend API and a React frontend with login, registration, profile, resource browse, and user reservation flows (book, list, edit, cancel). Admin resource management UI is planned for a later iteration.
 
 ## Technology Stack
 
@@ -41,10 +41,11 @@ Component-based structure with MUI as the shared UI library:
 
 ```
 components/   # Reusable UI components (AppLayout, AppHeader, ProtectedRoute)
-pages/        # Application-level views (Home, Login, Register, Profile)
+pages/        # Application-level views (Home, Login, Register, Profile, Resources, Reservations)
 context/      # Auth state (AuthProvider)
 hooks/        # Reusable React logic (useAuth)
-services/     # Backend API communication (authApi, apiClient, tokenStorage)
+services/     # Backend API communication (authApi, resourceApi, reservationApi, apiClient, tokenStorage)
+utils/        # Date/time and display helpers (dateTime, reservationLabels, resourceLabels)
 theme/        # MUI theme configuration
 types/        # Shared TypeScript types
 ```
@@ -76,7 +77,9 @@ The frontend uses React Router for navigation, React Context for auth state, and
 | `/register` | Register | Public (redirects when logged in) |
 | `/profile` | Profile | Protected |
 | `/resources` | Resources | Public |
-| `/resources/:id` | Resource detail | Public |
+| `/resources/:id` | Resource detail (availability + booking) | Public (booking requires login) |
+| `/reservations` | My Reservations | Protected |
+| `/reservations/:id` | Reservation detail (edit/cancel) | Protected |
 
 **Sign in with seed data** (after running `npm run db:seed` in the backend):
 
@@ -122,6 +125,35 @@ The browse UI at `/resources` lets anyone list and inspect bookable resources. N
 | `frontend/src/services/resourceApi.ts` | Resource API calls |
 | `frontend/src/types/resource.ts` | Resource types |
 | `frontend/src/utils/resourceLabels.ts` | Display labels for resource types |
+
+### Frontend Reservations
+
+Authenticated users can manage their own bookings. New reservations are created from the resource detail page — there is no standalone create page.
+
+**User flows:**
+
+1. **Browse resources** — Open `/resources`, search/filter, and click a row to view details.
+2. **View availability** — On `/resources/:id`, see a week calendar of booked time slots (public; no PII exposed). Navigate between weeks with prev/next controls.
+3. **Book a resource** — When logged in, use the inline booking form on `/resources/:id`. Choose start and end times on the hour or half-hour (30-minute slots only). Start must be in the future; end must be after start. Availability is checked before submit; on success you are redirected to the reservation detail page.
+4. **My Reservations** — At `/reservations`, list your bookings with status filters (Active / Cancelled / All). Edit reschedules via a modal; Cancel soft-cancels after confirmation.
+5. **Reservation detail** — At `/reservations/:id`, view full details, edit times/notes, or cancel. Edit and cancel are disabled for cancelled reservations.
+
+**Frontend reservation files:**
+
+| File | Purpose |
+|------|---------|
+| `frontend/src/pages/ResourceDetailPage.tsx` | Availability calendar + inline booking form |
+| `frontend/src/components/ResourceBookingsCalendar.tsx` | Week calendar view of booked slots |
+| `frontend/src/utils/slotTime.ts` | 30-minute slot helpers and datetime constraints |
+| `frontend/src/components/SlotDateTimeField.tsx` | Slot-aligned datetime-local input |
+| `frontend/src/pages/ReservationsPage.tsx` | My Reservations table with filters |
+| `frontend/src/pages/ReservationDetailPage.tsx` | Single reservation view, edit, cancel |
+| `frontend/src/components/ReservationEditDialog.tsx` | Reschedule modal |
+| `frontend/src/services/reservationApi.ts` | Reservation CRUD API calls |
+| `frontend/src/services/resourceApi.ts` | Resource list/detail + bookings + availability |
+| `frontend/src/types/reservation.ts` | Reservation types |
+| `frontend/src/utils/dateTime.ts` | ISO ↔ datetime-local helpers |
+| `frontend/src/utils/reservationLabels.ts` | Status labels and chip colors |
 
 ## Backend Setup
 
@@ -219,13 +251,21 @@ Foreign keys use `ON DELETE RESTRICT` to preserve reservation history. Users and
 
 Resources use an **exclusive reservation model** — only one active reservation per resource at a time.
 
-Overlap detection (to be implemented in the service layer):
+Overlap detection (implemented in the service layer):
 
 ```
 existing.startTime < new.endTime AND existing.endTime > new.startTime
 ```
 
 Only reservations with status `PENDING` or `CONFIRMED` block availability. `CANCELLED` reservations do not. Only resources with `isActive = true` are bookable.
+
+**Booking rules:**
+
+- Reservations must start on the hour or half-hour and last a multiple of 30 minutes.
+- Create and update reject times in the past (`startTime` must be in the future).
+- Cancelled reservations cannot be edited.
+- Cancelling an already-cancelled reservation is idempotent (returns the current record).
+- Listing reservations supports `resourceId` and `status` filters, always scoped to the current user's own bookings.
 
 ### Migrations
 
@@ -418,6 +458,8 @@ Authentication uses JWT access + refresh tokens. Send access tokens via `Authori
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | `GET` | `/` | Public | List resources (supports query filters) |
+| `GET` | `/:id/bookings` | Public | Busy intervals in a date range (no user PII) |
+| `GET` | `/:id/availability` | Public | Check whether a time slot is available |
 | `GET` | `/:id` | Public | Get resource by ID |
 | `POST` | `/` | Admin | Create resource |
 | `PATCH` | `/:id` | Admin | Update resource |
@@ -437,11 +479,54 @@ Example:
 curl "http://localhost:3000/api/resources?active=true&type=ROOM&search=conference"
 ```
 
+**Bookings in range** (`GET /api/resources/:id/bookings`):
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `from` | ISO 8601 datetime | Range start (inclusive) |
+| `to` | ISO 8601 datetime | Range end (inclusive) |
+
+Returns non-cancelled reservations overlapping the range. Response shape:
+
+```json
+{
+  "data": [
+    { "startTime": "2026-09-20T10:00:00.000Z", "endTime": "2026-09-20T11:00:00.000Z", "status": "CONFIRMED" }
+  ]
+}
+```
+
+Example:
+
+```bash
+curl "http://localhost:3000/api/resources/<resourceId>/bookings?from=2026-09-01T00:00:00.000Z&to=2026-09-30T23:59:59.000Z"
+```
+
+**Slot availability check** (`GET /api/resources/:id/availability`):
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `startTime` | ISO 8601 datetime | Proposed booking start |
+| `endTime` | ISO 8601 datetime | Proposed booking end |
+| `excludeReservationId` | string (optional) | Exclude this reservation when checking (for reschedule) |
+
+Response:
+
+```json
+{ "data": { "available": true } }
+```
+
+Example:
+
+```bash
+curl "http://localhost:3000/api/resources/<resourceId>/availability?startTime=2026-09-20T10:00:00.000Z&endTime=2026-09-20T11:00:00.000Z"
+```
+
 ### Reservation endpoints — `/api/reservations`
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `GET` | `/` | Authenticated | List reservations (users see own; admins see all) |
+| `GET` | `/` | Authenticated | List current user's reservations (own only, including for admins) |
 | `GET` | `/:id` | Authenticated | Get reservation (owner or admin) |
 | `POST` | `/` | Authenticated | Create reservation for authenticated user |
 | `PATCH` | `/:id` | Authenticated | Update reservation (owner or admin) |

@@ -83,6 +83,23 @@ export class ReservationRepository {
       },
     });
   }
+
+  async findBookingsInRange(
+    resourceId: string,
+    from: Date,
+    to: Date,
+  ): Promise<Array<{ startTime: Date; endTime: Date; status: ReservationStatus }>> {
+    return prisma.reservation.findMany({
+      where: {
+        resourceId,
+        status: { in: ['PENDING', 'CONFIRMED'] },
+        startTime: { lt: to },
+        endTime: { gt: from },
+      },
+      select: { startTime: true, endTime: true, status: true },
+      orderBy: { startTime: 'asc' },
+    });
+  }
 }
 
 export const reservationRepository = new ReservationRepository();
