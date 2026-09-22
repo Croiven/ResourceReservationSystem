@@ -28,6 +28,13 @@ export const listReservationsQuerySchema = z.object({
   status: z.nativeEnum(ReservationStatus).optional(),
 });
 
+export const adminListReservationsQuerySchema = z.object({
+  userId: z.string().min(1).optional(),
+  resourceId: z.string().min(1).optional(),
+  status: z.nativeEnum(ReservationStatus).optional(),
+});
+
 export type CreateReservationInput = z.infer<typeof createReservationSchema>;
 export type UpdateReservationInput = z.infer<typeof updateReservationSchema>;
 export type ListReservationsQuery = z.infer<typeof listReservationsQuerySchema>;
+export type AdminListReservationsQuery = z.infer<typeof adminListReservationsQuerySchema>;

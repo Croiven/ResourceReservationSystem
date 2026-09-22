@@ -37,6 +37,19 @@ export function AppHeader() {
               <Button color="inherit" component={RouterLink} to="/reservations">
                 My reservations
               </Button>
+              {user?.role === 'ADMIN' && (
+                <>
+                  <Button color="inherit" component={RouterLink} to="/admin/resources">
+                    Manage resources
+                  </Button>
+                  <Button color="inherit" component={RouterLink} to="/admin/users">
+                    Manage users
+                  </Button>
+                  <Button color="inherit" component={RouterLink} to="/admin/reservations">
+                    All reservations
+                  </Button>
+                </>
+              )}
               <Button color="inherit" component={RouterLink} to="/profile">
                 Profile
               </Button>

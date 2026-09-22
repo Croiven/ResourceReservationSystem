@@ -2,7 +2,7 @@
 
 A web application for browsing resources, viewing availability, and making reservations. This project is developed as part of a Master's thesis studying the structural quality and maintainability of software developed with AI assistance.
 
-The repository contains a working backend API and a React frontend with login, registration, profile, resource browse, and user reservation flows (book, list, edit, cancel). Admin resource management UI is planned for a later iteration.
+The repository contains a working backend API and a React frontend with login, registration, profile, resource browse, user reservation flows (book, list, edit, cancel), and admin-only management UI for resources, users, and all reservations.
 
 ## Technology Stack
 
@@ -40,12 +40,12 @@ Supporting layers: `models/`, `validation/`, `middleware/`
 Component-based structure with MUI as the shared UI library:
 
 ```
-components/   # Reusable UI components (AppLayout, AppHeader, ProtectedRoute)
-pages/        # Application-level views (Home, Login, Register, Profile, Resources, Reservations)
+components/   # Reusable UI components (AppLayout, AppHeader, ProtectedRoute, AdminRoute)
+pages/        # Application-level views (Home, Login, Register, Profile, Resources, Reservations, Admin*)
 context/      # Auth state (AuthProvider)
 hooks/        # Reusable React logic (useAuth)
-services/     # Backend API communication (authApi, resourceApi, reservationApi, apiClient, tokenStorage)
-utils/        # Date/time and display helpers (dateTime, reservationLabels, resourceLabels)
+services/     # Backend API communication (authApi, resourceApi, reservationApi, userApi, adminReservationApi, apiClient, tokenStorage)
+utils/        # Date/time and display helpers (dateTime, reservationLabels, resourceLabels, userLabels)
 theme/        # MUI theme configuration
 types/        # Shared TypeScript types
 ```
@@ -80,11 +80,15 @@ The frontend uses React Router for navigation, React Context for auth state, and
 | `/resources/:id` | Resource detail (availability + booking) | Public (booking requires login) |
 | `/reservations` | My Reservations | Protected |
 | `/reservations/:id` | Reservation detail (edit/cancel) | Protected |
+| `/admin/resources` | Manage resources (create/edit/deactivate) | Admin |
+| `/admin/users` | Manage users (role, name, deactivate) | Admin |
+| `/admin/reservations` | All reservations (filters, edit, cancel) | Admin |
+| `/admin/reservations/:id` | Admin reservation detail | Admin |
 
 **Sign in with seed data** (after running `npm run db:seed` in the backend):
 
-- Email: `user@example.com`
-- Password: `password`
+- Regular user: `user@example.com` / `password`
+- Admin user: `admin@example.com` / `password`
 
 **User flows:**
 
@@ -94,6 +98,8 @@ The frontend uses React Router for navigation, React Context for auth state, and
 4. **Logout** — Revokes the refresh token and clears stored tokens.
 
 Protected routes use `ProtectedRoute`, which shows a loading indicator while auth state is bootstrapped from storage on app load. If the access token is expired, the app attempts a silent refresh before redirecting to login.
+
+Admin routes use `AdminRoute`, which requires authentication and `role === 'ADMIN'`. Non-admins are redirected to the home page.
 
 **Frontend auth files:**
 
@@ -154,6 +160,32 @@ Authenticated users can manage their own bookings. New reservations are created 
 | `frontend/src/types/reservation.ts` | Reservation types |
 | `frontend/src/utils/dateTime.ts` | ISO ↔ datetime-local helpers |
 | `frontend/src/utils/reservationLabels.ts` | Status labels and chip colors |
+
+### Frontend Admin
+
+Admin-only pages live under `/admin/*`. Admins see links in the header and on the home page.
+
+**Admin flows:**
+
+1. **Manage resources** — At `/admin/resources`, list all resources (defaults to all statuses), create new resources, edit name/description/type/active status, deactivate inactive resources, or reactivate them.
+2. **Manage users** — At `/admin/users`, list users, edit names, promote/demote roles, and deactivate accounts. Admins cannot change their own role or deactivate their own account.
+3. **All reservations** — At `/admin/reservations`, list every reservation with status, user, and resource filters. Edit or cancel any active booking; click a row for detail at `/admin/reservations/:id`.
+
+`GET /api/reservations` remains scoped to the current user's own bookings even for admins. Use `GET /api/admin/reservations` for the admin list.
+
+**Frontend admin files:**
+
+| File | Purpose |
+|------|---------|
+| `frontend/src/components/AdminRoute.tsx` | Admin-only route guard |
+| `frontend/src/pages/AdminResourcesPage.tsx` | Resource CRUD table |
+| `frontend/src/components/ResourceFormDialog.tsx` | Create/edit resource modal |
+| `frontend/src/pages/AdminUsersPage.tsx` | User management table |
+| `frontend/src/components/UserEditDialog.tsx` | Edit user modal |
+| `frontend/src/pages/AdminReservationsPage.tsx` | All reservations table with filters |
+| `frontend/src/pages/AdminReservationDetailPage.tsx` | Admin reservation detail view |
+| `frontend/src/services/userApi.ts` | User admin API calls |
+| `frontend/src/services/adminReservationApi.ts` | Admin reservation list API |
 
 ## Backend Setup
 
@@ -450,8 +482,8 @@ Authentication uses JWT access + refresh tokens. Send access tokens via `Authori
 |--------|------|-------------|
 | `GET` | `/` | List all users |
 | `GET` | `/:id` | Get user by ID |
-| `PATCH` | `/:id` | Update user (role, isActive, name) |
-| `DELETE` | `/:id` | Soft-deactivate user |
+| `PATCH` | `/:id` | Update user (role, isActive, name). Admins cannot change their own role or deactivate themselves. |
+| `DELETE` | `/:id` | Soft-deactivate user. Admins cannot deactivate themselves. |
 
 ### Resource endpoints — `/api/resources`
 
@@ -531,6 +563,34 @@ curl "http://localhost:3000/api/resources/<resourceId>/availability?startTime=20
 | `POST` | `/` | Authenticated | Create reservation for authenticated user |
 | `PATCH` | `/:id` | Authenticated | Update reservation (owner or admin) |
 | `DELETE` | `/:id` | Authenticated | Cancel reservation (owner or admin) |
+
+**List query parameters** (`GET /api/reservations` — current user only):
+
+| Param | Values | Description |
+|-------|--------|-------------|
+| `resourceId` | string | Filter by resource |
+| `status` | `PENDING`, `CONFIRMED`, `CANCELLED` | Filter by status |
+
+### Admin endpoints — `/api/admin` (admin only)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/reservations` | List all reservations across users |
+
+**List query parameters** (`GET /api/admin/reservations`):
+
+| Param | Values | Description |
+|-------|--------|-------------|
+| `userId` | string | Filter by booking user |
+| `resourceId` | string | Filter by resource |
+| `status` | `PENDING`, `CONFIRMED`, `CANCELLED` | Filter by status |
+
+Example:
+
+```bash
+curl "http://localhost:3000/api/admin/reservations?status=CONFIRMED" \
+  -H "Authorization: Bearer <adminAccessToken>"
+```
 
 ### Example: login flow
 

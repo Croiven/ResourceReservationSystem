@@ -1,5 +1,6 @@
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import { asyncHandler } from '../middleware/async-handler.middleware.js';
+import type { AuthenticatedRequest } from '../models/auth.model.js';
 import { userService } from '../services/user.service.js';
 import { getValidated } from '../validation/validate.middleware.js';
 import type { UpdateUserInput } from '../validation/auth.validation.js';
@@ -16,16 +17,18 @@ export class UserController {
     res.status(200).json({ data: user });
   });
 
-  update = asyncHandler(async (req, res: Response) => {
+  update = asyncHandler(async (req: Request, res: Response) => {
+    const authReq = req as AuthenticatedRequest;
     const data = getValidated<UpdateUserInput>(req, 'body');
     const { id } = getValidated<{ id: string }>(req, 'params');
-    const user = await userService.updateUser(id, data);
+    const user = await userService.updateUser(id, data, authReq.user.id);
     res.status(200).json({ data: user });
   });
 
-  deactivate = asyncHandler(async (req, res: Response) => {
+  deactivate = asyncHandler(async (req: Request, res: Response) => {
+    const authReq = req as AuthenticatedRequest;
     const { id } = getValidated<{ id: string }>(req, 'params');
-    const user = await userService.deactivateUser(id);
+    const user = await userService.deactivateUser(id, authReq.user.id);
     res.status(200).json({ data: user });
   });
 }

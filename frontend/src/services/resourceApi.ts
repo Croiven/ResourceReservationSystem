@@ -1,5 +1,10 @@
 import type { AvailabilityResult, ResourceBooking } from '../types/reservation';
-import type { ListResourcesQuery, Resource } from '../types/resource';
+import type {
+  CreateResourceInput,
+  ListResourcesQuery,
+  Resource,
+  UpdateResourceInput,
+} from '../types/resource';
 import { apiRequest } from './apiClient';
 
 function buildQueryString(query?: ListResourcesQuery): string {
@@ -50,4 +55,41 @@ export async function checkAvailability(
     params.set('excludeReservationId', excludeReservationId);
   }
   return apiRequest<AvailabilityResult>(`/resources/${id}/availability?${params.toString()}`);
+}
+
+function requireAccessToken(accessToken: string | undefined): string {
+  if (!accessToken) {
+    throw new Error('Not authenticated');
+  }
+  return accessToken;
+}
+
+export async function createResource(
+  data: CreateResourceInput,
+  accessToken: string,
+): Promise<Resource> {
+  return apiRequest<Resource>('/resources', {
+    method: 'POST',
+    body: data,
+    accessToken: requireAccessToken(accessToken),
+  });
+}
+
+export async function updateResource(
+  id: string,
+  data: UpdateResourceInput,
+  accessToken: string,
+): Promise<Resource> {
+  return apiRequest<Resource>(`/resources/${id}`, {
+    method: 'PATCH',
+    body: data,
+    accessToken: requireAccessToken(accessToken),
+  });
+}
+
+export async function deactivateResource(id: string, accessToken: string): Promise<Resource> {
+  return apiRequest<Resource>(`/resources/${id}`, {
+    method: 'DELETE',
+    accessToken: requireAccessToken(accessToken),
+  });
 }

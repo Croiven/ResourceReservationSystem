@@ -33,3 +33,10 @@ export interface ChangePasswordInput {
   currentPassword: string;
   newPassword: string;
 }
+
+export interface UpdateUserInput {
+  firstName?: string;
+  lastName?: string;
+  role?: UserRole;
+  isActive?: boolean;
+}

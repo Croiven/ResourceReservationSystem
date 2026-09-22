@@ -1,5 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { checkAvailability, getResource, getResourceBookings, listResources } from './resourceApi';
+import {
+  checkAvailability,
+  createResource,
+  deactivateResource,
+  getResource,
+  getResourceBookings,
+  listResources,
+  updateResource,
+} from './resourceApi';
 
 describe('resourceApi', () => {
   afterEach(() => {
@@ -94,5 +102,86 @@ describe('resourceApi', () => {
     );
 
     expect(result.available).toBe(true);
+  });
+
+  it('calls create resource endpoint with auth header', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          data: {
+            id: 'resource-1',
+            name: 'New Room',
+            description: null,
+            type: 'ROOM',
+            isActive: true,
+            createdAt: '',
+            updatedAt: '',
+          },
+        }),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    await createResource({ name: 'New Room', type: 'ROOM' }, 'token-123');
+
+    const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    const headers = init.headers as Record<string, string>;
+    expect(headers['Authorization']).toBe('Bearer token-123');
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/resources',
+      expect.objectContaining({ method: 'POST' }),
+    );
+  });
+
+  it('calls update resource endpoint', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          data: {
+            id: 'resource-1',
+            name: 'Updated Room',
+            description: null,
+            type: 'ROOM',
+            isActive: true,
+            createdAt: '',
+            updatedAt: '',
+          },
+        }),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    await updateResource('resource-1', { name: 'Updated Room' }, 'token-123');
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/resources/resource-1',
+      expect.objectContaining({ method: 'PATCH' }),
+    );
+  });
+
+  it('calls deactivate resource endpoint', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          data: {
+            id: 'resource-1',
+            name: 'Room',
+            description: null,
+            type: 'ROOM',
+            isActive: false,
+            createdAt: '',
+            updatedAt: '',
+          },
+        }),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    await deactivateResource('resource-1', 'token-123');
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/resources/resource-1',
+      expect.objectContaining({ method: 'DELETE' }),
+    );
   });
 });
