@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { getResource, listResources } from './resourceApi';
+import { checkAvailability, getResource, getResourceBookings, listResources } from './resourceApi';
 
 describe('resourceApi', () => {
   afterEach(() => {
@@ -59,5 +59,40 @@ describe('resourceApi', () => {
 
     expect(result.name).toBe('Conference Room A');
     expect(mockFetch).toHaveBeenCalledWith('/api/resources/resource-1', expect.any(Object));
+  });
+
+  it('calls resource bookings endpoint', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ data: [] }),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    await getResourceBookings(
+      'resource-1',
+      '2030-01-01T00:00:00.000Z',
+      '2030-02-01T00:00:00.000Z',
+    );
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/resources/resource-1/bookings?from=2030-01-01T00%3A00%3A00.000Z&to=2030-02-01T00%3A00%3A00.000Z',
+      expect.any(Object),
+    );
+  });
+
+  it('calls availability check endpoint', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ data: { available: true } }),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    const result = await checkAvailability(
+      'resource-1',
+      '2030-01-01T10:00:00.000Z',
+      '2030-01-01T11:00:00.000Z',
+    );
+
+    expect(result.available).toBe(true);
   });
 });

@@ -6,6 +6,8 @@ import { authorize } from '../middleware/authorize.middleware.js';
 import {
   createResourceSchema,
   listResourcesQuerySchema,
+  resourceAvailabilityQuerySchema,
+  resourceBookingsQuerySchema,
   resourceIdParamSchema,
   updateResourceSchema,
 } from '../validation/resource.validation.js';
@@ -14,6 +16,16 @@ import { validate } from '../validation/validate.middleware.js';
 const router = Router();
 
 router.get('/', validate({ query: listResourcesQuerySchema }), resourceController.list);
+router.get(
+  '/:id/bookings',
+  validate({ params: resourceIdParamSchema, query: resourceBookingsQuerySchema }),
+  resourceController.getBookings,
+);
+router.get(
+  '/:id/availability',
+  validate({ params: resourceIdParamSchema, query: resourceAvailabilityQuerySchema }),
+  resourceController.checkAvailability,
+);
 router.get('/:id', validate({ params: resourceIdParamSchema }), resourceController.getById);
 
 router.post(

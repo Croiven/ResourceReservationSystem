@@ -24,7 +24,6 @@ export const reservationIdParamSchema = z.object({
 });
 
 export const listReservationsQuerySchema = z.object({
-  userId: z.string().min(1).optional(),
   resourceId: z.string().min(1).optional(),
   status: z.nativeEnum(ReservationStatus).optional(),
 });

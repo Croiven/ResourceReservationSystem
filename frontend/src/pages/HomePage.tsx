@@ -27,9 +27,14 @@ export function HomePage() {
                 Browse resources
               </Button>
               {isAuthenticated ? (
-                <Button variant="outlined" component={RouterLink} to="/profile">
-                  View profile
-                </Button>
+                <>
+                  <Button variant="outlined" component={RouterLink} to="/reservations">
+                    My reservations
+                  </Button>
+                  <Button variant="outlined" component={RouterLink} to="/profile">
+                    View profile
+                  </Button>
+                </>
               ) : (
                 <>
                   <Button variant="contained" component={RouterLink} to="/login">

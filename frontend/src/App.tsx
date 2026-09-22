@@ -5,6 +5,8 @@ import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { RegisterPage } from './pages/RegisterPage';
+import { ReservationDetailPage } from './pages/ReservationDetailPage';
+import { ReservationsPage } from './pages/ReservationsPage';
 import { ResourceDetailPage } from './pages/ResourceDetailPage';
 import { ResourcesPage } from './pages/ResourcesPage';
 
@@ -36,6 +38,22 @@ export function App() {
           element={
             <ProtectedRoute>
               <ProfilePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/reservations"
+          element={
+            <ProtectedRoute>
+              <ReservationsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/reservations/:id"
+          element={
+            <ProtectedRoute>
+              <ReservationDetailPage />
             </ProtectedRoute>
           }
         />

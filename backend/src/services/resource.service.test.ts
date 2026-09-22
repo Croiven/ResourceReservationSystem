@@ -1,6 +1,6 @@
 import { ResourceType } from '@prisma/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { NotFoundError } from '../middleware/error.middleware.js';
+import { NotFoundError, ValidationError } from '../middleware/error.middleware.js';
 
 vi.mock('../repositories/resource.repository.js', () => ({
   resourceRepository: {
@@ -12,6 +12,14 @@ vi.mock('../repositories/resource.repository.js', () => ({
   },
 }));
 
+vi.mock('../repositories/reservation.repository.js', () => ({
+  reservationRepository: {
+    findBookingsInRange: vi.fn(),
+    findOverlapping: vi.fn(),
+  },
+}));
+
+import { reservationRepository } from '../repositories/reservation.repository.js';
 import { resourceRepository } from '../repositories/resource.repository.js';
 import { ResourceService } from './resource.service.js';
 
@@ -157,6 +165,65 @@ describe('ResourceService', () => {
       vi.mocked(resourceRepository.findById).mockResolvedValue(null);
 
       await expect(resourceService.deactivateResource('missing')).rejects.toThrow(NotFoundError);
+    });
+  });
+
+  describe('getResourceBookings', () => {
+    it('returns bookings in range for a resource', async () => {
+      vi.mocked(resourceRepository.findById).mockResolvedValue(mockResource);
+      vi.mocked(reservationRepository.findBookingsInRange).mockResolvedValue([
+        {
+          startTime: new Date('2030-01-01T10:00:00Z'),
+          endTime: new Date('2030-01-01T11:00:00Z'),
+          status: 'CONFIRMED',
+        },
+      ]);
+
+      const result = await resourceService.getResourceBookings('resource-1', {
+        from: '2030-01-01T00:00:00.000Z',
+        to: '2030-02-01T00:00:00.000Z',
+      });
+
+      expect(result).toHaveLength(1);
+    });
+  });
+
+  describe('checkAvailability', () => {
+    it('returns available when no overlap exists', async () => {
+      vi.mocked(resourceRepository.findById).mockResolvedValue(mockResource);
+      vi.mocked(reservationRepository.findOverlapping).mockResolvedValue(null);
+
+      const result = await resourceService.checkAvailability('resource-1', {
+        startTime: '2030-01-01T10:00:00.000Z',
+        endTime: '2030-01-01T11:00:00.000Z',
+      });
+
+      expect(result.available).toBe(true);
+    });
+
+    it('rejects invalid slot alignment', async () => {
+      vi.mocked(resourceRepository.findById).mockResolvedValue(mockResource);
+
+      await expect(
+        resourceService.checkAvailability('resource-1', {
+          startTime: '2030-01-01T10:15:00.000Z',
+          endTime: '2030-01-01T11:00:00.000Z',
+        }),
+      ).rejects.toThrow(ValidationError);
+    });
+
+    it('returns unavailable when resource is inactive', async () => {
+      vi.mocked(resourceRepository.findById).mockResolvedValue({
+        ...mockResource,
+        isActive: false,
+      });
+
+      const result = await resourceService.checkAvailability('resource-1', {
+        startTime: '2030-01-01T10:00:00.000Z',
+        endTime: '2030-01-01T11:00:00.000Z',
+      });
+
+      expect(result.available).toBe(false);
     });
   });
 });
