@@ -14,6 +14,7 @@ vi.mock('../repositories/resource.repository.js', () => ({
 
 vi.mock('../repositories/reservation.repository.js', () => ({
   reservationRepository: {
+    findById: vi.fn(),
     findBookingsInRange: vi.fn(),
     findOverlapping: vi.fn(),
   },
@@ -212,6 +213,25 @@ describe('ResourceService', () => {
       ).rejects.toThrow(ValidationError);
     });
 
+    it('ignores overlap with the excluded reservation when rescheduling', async () => {
+      vi.mocked(resourceRepository.findById).mockResolvedValue(mockResource);
+      vi.mocked(reservationRepository.findOverlapping).mockResolvedValue(null);
+
+      const result = await resourceService.checkAvailability('resource-1', {
+        startTime: '2030-01-01T10:00:00.000Z',
+        endTime: '2030-01-01T12:00:00.000Z',
+        excludeReservationId: 'res-1',
+      });
+
+      expect(result.available).toBe(true);
+      expect(reservationRepository.findOverlapping).toHaveBeenCalledWith(
+        'resource-1',
+        new Date('2030-01-01T10:00:00.000Z'),
+        new Date('2030-01-01T12:00:00.000Z'),
+        'res-1',
+      );
+    });
+
     it('returns unavailable when resource is inactive', async () => {
       vi.mocked(resourceRepository.findById).mockResolvedValue({
         ...mockResource,
@@ -224,6 +244,7 @@ describe('ResourceService', () => {
       });
 
       expect(result.available).toBe(false);
+      expect(result.reason).toBe('RESOURCE_INACTIVE');
     });
   });
 });

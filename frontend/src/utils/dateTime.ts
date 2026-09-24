@@ -16,6 +16,17 @@ export function toLocalDateInput(iso: string): string {
   return local.toISOString().slice(0, 10);
 }
 
+export function formatDateTime(iso: string): string {
+  const date = new Date(iso);
+  return new Intl.DateTimeFormat(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
+}
+
 export function formatDateTimeRange(start: string, end: string): string {
   const startDate = new Date(start);
   const endDate = new Date(end);

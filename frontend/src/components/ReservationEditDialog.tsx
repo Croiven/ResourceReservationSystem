@@ -10,18 +10,25 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useEffect, useState } from 'react';
 import * as reservationApi from '../services/reservationApi';
-import * as resourceApi from '../services/resourceApi';
+import { checkEditAvailability } from '../utils/reservationEditAvailability';
 import { getTokens } from '../services/tokenStorage';
 import type { Reservation } from '../types/reservation';
 import { ApiError } from '../types/api';
-import { formatDateTimeRange, toIsoDateTime, toLocalDateTimeInput } from '../utils/dateTime';
+import {
+  formatDateTime,
+  formatDateTimeRange,
+  toIsoDateTime,
+  toLocalDateTimeInput,
+} from '../utils/dateTime';
+import { isReservationEditable } from '../utils/reservationRules';
 import {
   formatSlotDuration,
+  getEditMinStartDateTimeLocal,
+  getLocalSlotRangeFeedback,
   getMinEndDateTimeLocal,
-  getMinStartDateTimeLocal,
   getSlotDurationMinutes,
   isLocalDateTimeBefore,
-  isValidSlotRange,
+  isValidLocalSlotRange,
 } from '../utils/slotTime';
 import { SlotDateTimeField } from './SlotDateTimeField';
 
@@ -45,7 +52,8 @@ export function ReservationEditDialog({
   const [availabilityMessage, setAvailabilityMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const minStartTime = getMinStartDateTimeLocal();
+  const editable = isReservationEditable(reservation);
+  const minStartTime = getEditMinStartDateTimeLocal(reservation.startTime);
   const minEndTime = startTime ? getMinEndDateTimeLocal(startTime) : '';
 
   const handleStartTimeChange = (value: string) => {
@@ -66,30 +74,22 @@ export function ReservationEditDialog({
   }, [open, reservation]);
 
   useEffect(() => {
-    if (!open || !startTime || !endTime) {
+    if (!open || !editable || !startTime || !endTime) {
       setAvailabilityMessage(null);
       return;
     }
 
-    if (!isValidSlotRange(startTime, endTime)) {
-      setAvailabilityMessage('Choose times on the hour or half-hour.');
+    const localFeedback = getLocalSlotRangeFeedback(startTime, endTime);
+    if (localFeedback) {
+      setAvailabilityMessage(localFeedback.message);
       return;
     }
 
     const timer = setTimeout(() => {
       void (async () => {
         try {
-          const startIso = toIsoDateTime(startTime);
-          const endIso = toIsoDateTime(endTime);
-          const result = await resourceApi.checkAvailability(
-            reservation.resourceId,
-            startIso,
-            endIso,
-            reservation.id,
-          );
-          setAvailabilityMessage(
-            result.available ? 'This time slot is available.' : 'This time slot is already booked.',
-          );
+          const feedback = await checkEditAvailability(reservation, startTime, endTime);
+          setAvailabilityMessage(feedback.message);
         } catch {
           setAvailabilityMessage(null);
         }
@@ -99,17 +99,28 @@ export function ReservationEditDialog({
     return () => {
       clearTimeout(timer);
     };
-  }, [open, startTime, endTime, reservation.resourceId, reservation.id]);
+  }, [open, editable, startTime, endTime, reservation]);
 
   const handleSubmit = async () => {
     setError(null);
+
+    if (!editable) {
+      setError('This reservation can no longer be edited because it has already started.');
+      return;
+    }
 
     if (!startTime || !endTime) {
       setError('Start and end times are required.');
       return;
     }
 
-    if (!isValidSlotRange(startTime, endTime)) {
+    const localFeedback = getLocalSlotRangeFeedback(startTime, endTime);
+    if (localFeedback) {
+      setError(localFeedback.message);
+      return;
+    }
+
+    if (!isValidLocalSlotRange(startTime, endTime)) {
       setError(
         'Reservations must start on the hour or half-hour and last a multiple of 30 minutes.',
       );
@@ -155,31 +166,61 @@ export function ReservationEditDialog({
           <Typography variant="body2" color="text.secondary">
             {reservation.resource.name} · {formatDateTimeRange(reservation.startTime, reservation.endTime)}
           </Typography>
+          {!editable && (
+            <Alert severity="info">
+              This reservation has already started and can no longer be rescheduled.
+            </Alert>
+          )}
           {error && <Alert severity="error">{error}</Alert>}
           {availabilityMessage && (
-            <Alert severity={availabilityMessage.includes('available') && !availabilityMessage.includes('already') ? 'success' : 'warning'}>
+            <Alert
+              severity={
+                availabilityMessage === 'This time slot is available.' ? 'success' : 'warning'
+              }
+            >
               {availabilityMessage}
             </Alert>
           )}
-          <SlotDateTimeField
-            label="Start time"
-            value={startTime}
-            onChange={handleStartTimeChange}
-            min={minStartTime}
-          />
-          <SlotDateTimeField
-            label="End time"
-            value={endTime}
-            onChange={setEndTime}
-            min={minEndTime}
-            disabled={!startTime}
-            helperText={
-              startTime
-                ? 'Must be after start time, on the hour or half-hour'
-                : 'Select a start time first'
-            }
-          />
-          {startTime && endTime && isValidSlotRange(startTime, endTime) && (
+          {editable ? (
+            <>
+              <SlotDateTimeField
+                label="Start time"
+                value={startTime}
+                onChange={handleStartTimeChange}
+                min={minStartTime}
+              />
+              <SlotDateTimeField
+                label="End time"
+                value={endTime}
+                onChange={setEndTime}
+                min={minEndTime}
+                disabled={!startTime}
+                helperText={
+                  startTime
+                    ? 'Must be after start time, on the hour or half-hour'
+                    : 'Select a start time first'
+                }
+              />
+            </>
+          ) : (
+            <>
+              <TextField
+                label="Start time"
+                value={formatDateTime(reservation.startTime)}
+                fullWidth
+                disabled
+                slotProps={{ inputLabel: { shrink: true } }}
+              />
+              <TextField
+                label="End time"
+                value={formatDateTime(reservation.endTime)}
+                fullWidth
+                disabled
+                slotProps={{ inputLabel: { shrink: true } }}
+              />
+            </>
+          )}
+          {editable && startTime && endTime && isValidLocalSlotRange(startTime, endTime) && (
             <Typography variant="body2" color="text.secondary">
               {formatDateTimeRange(toIsoDateTime(startTime), toIsoDateTime(endTime))}
               {' · '}
@@ -195,6 +236,7 @@ export function ReservationEditDialog({
             fullWidth
             multiline
             minRows={2}
+            disabled={!editable}
           />
         </Stack>
       </DialogContent>
@@ -202,7 +244,11 @@ export function ReservationEditDialog({
         <Button onClick={onClose} disabled={isSubmitting}>
           Cancel
         </Button>
-        <Button onClick={() => void handleSubmit()} variant="contained" disabled={isSubmitting}>
+        <Button
+          onClick={() => void handleSubmit()}
+          variant="contained"
+          disabled={isSubmitting || !editable}
+        >
           {isSubmitting ? <CircularProgress size={24} /> : 'Save changes'}
         </Button>
       </DialogActions>

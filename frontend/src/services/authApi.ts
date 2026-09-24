@@ -6,6 +6,7 @@ import type {
   User,
 } from '../types/user';
 import { apiRequest } from './apiClient';
+import { refreshAuthTokens } from './sessionRefresh';
 
 export async function register(data: RegisterInput): Promise<User> {
   return apiRequest<User>('/auth/register', { method: 'POST', body: data });
@@ -23,10 +24,7 @@ export async function logout(refreshToken: string): Promise<void> {
 }
 
 export async function refresh(refreshToken: string): Promise<AuthTokens> {
-  return apiRequest<AuthTokens>('/auth/refresh', {
-    method: 'POST',
-    body: { refreshToken },
-  });
+  return refreshAuthTokens(refreshToken);
 }
 
 export async function getMe(accessToken: string): Promise<User> {

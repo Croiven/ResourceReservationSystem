@@ -1,10 +1,14 @@
-import { screen } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '../test/renderWithProviders';
 import { AppHeader } from './AppHeader';
 
 vi.mock('../hooks/useAuth', () => ({
   useAuth: vi.fn(),
+}));
+
+vi.mock('@mui/material/useMediaQuery', () => ({
+  default: () => false,
 }));
 
 import { useAuth } from '../hooks/useAuth';
@@ -52,11 +56,14 @@ describe('AppHeader', () => {
 
     renderWithProviders(<AppHeader />);
 
-    expect(screen.getByRole('link', { name: /profile/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /logout/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /regular/i }));
+
+    const menu = screen.getByRole('menu');
+    expect(within(menu).getByRole('menuitem', { name: /profile/i })).toBeInTheDocument();
+    expect(within(menu).getByRole('menuitem', { name: /logout/i })).toBeInTheDocument();
   });
 
-  it('renders admin links for admin users', () => {
+  it('renders admin menu for admin users', async () => {
     vi.mocked(useAuth).mockReturnValue({
       user: {
         id: '1',
@@ -79,8 +86,11 @@ describe('AppHeader', () => {
 
     renderWithProviders(<AppHeader />);
 
-    expect(screen.getByRole('link', { name: /manage resources/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /manage users/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /all reservations/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /open admin menu/i }));
+
+    const menu = await screen.findByRole('menu');
+    expect(within(menu).getByRole('menuitem', { name: /manage resources/i })).toBeInTheDocument();
+    expect(within(menu).getByRole('menuitem', { name: /manage users/i })).toBeInTheDocument();
+    expect(within(menu).getByRole('menuitem', { name: /all reservations/i })).toBeInTheDocument();
   });
 });

@@ -5,12 +5,17 @@ import {
   formatSlotDuration,
   getAllTimeSlotValues,
   getAvailableTimeSlotsForDate,
+  getEditMinStartDateTimeLocal,
+  getLocalSlotRangeFeedback,
   getMinEndDateTimeLocal,
   getMinStartDateTimeLocal,
   getNextSlotAfter,
   getSlotDurationMinutes,
+  isLocalDateTimeBefore,
   isSlotAlignedLocal,
+  isValidLocalSlotRange,
   isValidSlotRange,
+  slotAvailabilityFeedback,
   splitLocalDateTime,
 } from './slotTime';
 
@@ -84,5 +89,34 @@ describe('slotTime', () => {
       time: '10:30',
     });
     expect(combineLocalDateTime('2030-06-01', '10:30')).toBe('2030-06-01T10:30');
+  });
+
+  it('returns specific feedback for invalid local slot ranges', () => {
+    expect(getLocalSlotRangeFeedback('2030-06-01T10:15', '2030-06-01T11:00')?.message).toMatch(
+      /start time must be on the hour or half-hour/i,
+    );
+    expect(getLocalSlotRangeFeedback('2030-06-01T10:00', '2030-06-01T10:45')?.message).toMatch(
+      /end time must be on the hour or half-hour/i,
+    );
+    expect(getLocalSlotRangeFeedback('2030-06-01T11:00', '2030-06-01T10:00')?.message).toMatch(
+      /after start time/i,
+    );
+  });
+
+  it('describes overlap availability clearly', () => {
+    expect(slotAvailabilityFeedback(false).message).toMatch(/overlaps another booking/i);
+  });
+
+  it('validates datetime-local slot ranges for edit forms', () => {
+    expect(isValidLocalSlotRange('2030-06-01T10:00', '2030-06-01T11:00')).toBe(true);
+    expect(isValidLocalSlotRange('2030-06-01T10:15', '2030-06-01T11:00')).toBe(false);
+  });
+
+  it('keeps the booked start selectable before the reservation begins', () => {
+    const reservationStartIso = '2030-06-01T10:00:00.000Z';
+    const now = new Date('2030-06-01T09:00:00.000Z');
+    const minStart = getEditMinStartDateTimeLocal(reservationStartIso, now);
+    const bookedLocal = dateToLocalDateTimeInput(new Date(reservationStartIso));
+    expect(isLocalDateTimeBefore(bookedLocal, minStart)).toBe(false);
   });
 });

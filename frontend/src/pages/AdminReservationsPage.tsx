@@ -41,6 +41,7 @@ import {
   STATUS_FILTER_OPTIONS,
   type StatusFilter,
 } from '../utils/reservationLabels';
+import { isReservationCancellable, isReservationEditable } from '../utils/reservationRules';
 
 export function AdminReservationsPage() {
   const navigate = useNavigate();
@@ -139,8 +140,6 @@ export function AdminReservationsPage() {
       setIsCancelling(false);
     }
   };
-
-  const isActive = (reservation: Reservation) => reservation.status !== 'CANCELLED';
 
   return (
     <AppLayout maxWidth="lg">
@@ -272,7 +271,7 @@ export function AdminReservationsPage() {
                       <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
                         <Button
                           size="small"
-                          disabled={!isActive(reservation)}
+                          disabled={!isReservationEditable(reservation)}
                           onClick={(event) => {
                             event.stopPropagation();
                             setEditReservation(reservation);
@@ -283,7 +282,7 @@ export function AdminReservationsPage() {
                         <Button
                           size="small"
                           color="error"
-                          disabled={!isActive(reservation)}
+                          disabled={!isReservationCancellable(reservation)}
                           onClick={(event) => {
                             event.stopPropagation();
                             setCancelReservation(reservation);
