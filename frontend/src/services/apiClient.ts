@@ -1,6 +1,6 @@
 import { ApiError, type ApiResponse } from '../types/api';
-import { clearTokens, getTokens, setTokens } from './tokenStorage';
-import type { AuthTokens } from '../types/user';
+import { getTokens } from './tokenStorage';
+import { notifySessionExpired, refreshAuthTokens } from './sessionRefresh';
 
 const API_BASE_URL = '/api';
 
@@ -20,25 +20,6 @@ async function parseErrorResponse(response: Response): Promise<ApiError> {
   } catch {
     return new ApiError('Request failed', response.status);
   }
-}
-
-async function refreshAccessToken(refreshToken: string): Promise<AuthTokens> {
-  const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refreshToken }),
-  });
-
-  if (!response.ok) {
-    throw await parseErrorResponse(response);
-  }
-
-  const body = (await response.json()) as ApiResponse<AuthTokens>;
-  setTokens({
-    accessToken: body.data.accessToken,
-    refreshToken: body.data.refreshToken,
-  });
-  return body.data;
 }
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
@@ -63,14 +44,14 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     const tokens = getTokens();
     if (tokens?.refreshToken) {
       try {
-        const refreshed = await refreshAccessToken(tokens.refreshToken);
+        const refreshed = await refreshAuthTokens(tokens.refreshToken);
         return apiRequest<T>(path, {
           ...options,
           accessToken: refreshed.accessToken,
           skipAuthRetry: true,
         });
       } catch {
-        clearTokens();
+        notifySessionExpired();
         throw new ApiError('Session expired', 401);
       }
     }

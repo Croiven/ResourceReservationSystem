@@ -2,6 +2,7 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
+import CircularProgress from '@mui/material/CircularProgress';
 import IconButton from '@mui/material/IconButton';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
@@ -19,6 +20,7 @@ interface ResourceBookingsCalendarProps {
   bookings: ResourceBooking[];
   weekStart: Date;
   onWeekChange: (nextWeekStart: Date) => void;
+  loading?: boolean;
 }
 
 function formatWeekRange(weekStart: Date): string {
@@ -51,6 +53,7 @@ export function ResourceBookingsCalendar({
   bookings,
   weekStart,
   onWeekChange,
+  loading = false,
 }: ResourceBookingsCalendarProps) {
   const weekDays = useMemo(
     () => Array.from({ length: 7 }, (_, index) => addDays(weekStart, index)),
@@ -76,7 +79,9 @@ export function ResourceBookingsCalendar({
     <Stack spacing={1.5}>
       <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
         <IconButton
+          type="button"
           aria-label="Previous week"
+          disabled={loading}
           onClick={() => {
             onWeekChange(addDays(weekStart, -7));
           }}
@@ -88,7 +93,9 @@ export function ResourceBookingsCalendar({
           {formatWeekRange(weekStart)}
         </Typography>
         <IconButton
+          type="button"
           aria-label="Next week"
+          disabled={loading}
           onClick={() => {
             onWeekChange(addDays(weekStart, 7));
           }}
@@ -100,6 +107,7 @@ export function ResourceBookingsCalendar({
 
       <Box
         sx={{
+          position: 'relative',
           overflow: 'auto',
           maxHeight: CALENDAR_MAX_HEIGHT_PX,
           border: 1,
@@ -107,6 +115,21 @@ export function ResourceBookingsCalendar({
           borderRadius: 1,
         }}
       >
+        {loading && (
+          <Box
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              zIndex: 3,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              bgcolor: 'rgba(255, 255, 255, 0.6)',
+            }}
+          >
+            <CircularProgress size={28} aria-label="Loading bookings" />
+          </Box>
+        )}
         <Box
           sx={{
             display: 'grid',

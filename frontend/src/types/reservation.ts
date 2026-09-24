@@ -55,6 +55,12 @@ export interface ResourceBooking {
   status: 'PENDING' | 'CONFIRMED';
 }
 
+export type AvailabilityUnavailableReason =
+  | 'RESOURCE_INACTIVE'
+  | 'START_IN_PAST'
+  | 'OVERLAP';
+
 export interface AvailabilityResult {
   available: boolean;
+  reason?: AvailabilityUnavailableReason;
 }

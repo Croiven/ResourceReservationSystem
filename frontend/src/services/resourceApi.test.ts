@@ -88,6 +88,26 @@ describe('resourceApi', () => {
     );
   });
 
+  it('passes excludeReservationId when checking availability for reschedule', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ data: { available: true } }),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    await checkAvailability(
+      'resource-1',
+      '2030-01-01T10:00:00.000Z',
+      '2030-01-01T12:00:00.000Z',
+      'res-1',
+    );
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.stringContaining('excludeReservationId=res-1'),
+      expect.any(Object),
+    );
+  });
+
   it('calls availability check endpoint', async () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,

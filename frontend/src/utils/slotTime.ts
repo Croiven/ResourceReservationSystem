@@ -22,6 +22,85 @@ export function isSlotAlignedLocal(localValue: string): boolean {
   return date.getMinutes() % SLOT_MINUTES === 0 && date.getSeconds() === 0 && date.getMilliseconds() === 0;
 }
 
+export type SlotRangeFeedback = {
+  severity: 'warning' | 'success';
+  message: string;
+};
+
+export function getLocalSlotRangeFeedback(
+  startLocal: string,
+  endLocal: string,
+  now = new Date(),
+): SlotRangeFeedback | null {
+  if (!startLocal || !endLocal) {
+    return null;
+  }
+
+  const startMs = new Date(startLocal).getTime();
+  const endMs = new Date(endLocal).getTime();
+
+  if (Number.isNaN(startMs) || Number.isNaN(endMs)) {
+    return { severity: 'warning', message: 'Enter a valid start and end time.' };
+  }
+
+  if (endMs <= startMs) {
+    return { severity: 'warning', message: 'End time must be after start time.' };
+  }
+
+  if (!isSlotAlignedLocal(startLocal)) {
+    return {
+      severity: 'warning',
+      message: 'Start time must be on the hour or half-hour (for example 10:00 or 10:30).',
+    };
+  }
+
+  if (!isSlotAlignedLocal(endLocal)) {
+    return {
+      severity: 'warning',
+      message: 'End time must be on the hour or half-hour (for example 10:00 or 10:30).',
+    };
+  }
+
+  const durationMs = endMs - startMs;
+  if (durationMs < SLOT_MS) {
+    return { severity: 'warning', message: 'Bookings must be at least 30 minutes long.' };
+  }
+
+  if (durationMs % SLOT_MS !== 0) {
+    return {
+      severity: 'warning',
+      message: 'Booking length must be a multiple of 30 minutes (30 min, 1 h, 1 h 30 min, and so on).',
+    };
+  }
+
+  if (startMs < now.getTime()) {
+    return { severity: 'warning', message: 'Start time must be in the future.' };
+  }
+
+  return null;
+}
+
+const DATETIME_LOCAL_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
+
+export function isValidLocalSlotRange(startLocal: string, endLocal: string): boolean {
+  if (!DATETIME_LOCAL_PATTERN.test(startLocal) || !DATETIME_LOCAL_PATTERN.test(endLocal)) {
+    return false;
+  }
+
+  return getLocalSlotRangeFeedback(startLocal, endLocal) === null;
+}
+
+export function slotAvailabilityFeedback(available: boolean): SlotRangeFeedback {
+  if (available) {
+    return { severity: 'success', message: 'This time slot is available.' };
+  }
+
+  return {
+    severity: 'warning',
+    message: 'This time overlaps another booking on this resource. Choose a different start or end time.',
+  };
+}
+
 export function isValidSlotRange(start: string | Date, end: string | Date): boolean {
   const startMs = typeof start === 'string' ? new Date(start).getTime() : start.getTime();
   const endMs = typeof end === 'string' ? new Date(end).getTime() : end.getTime();
@@ -42,6 +121,18 @@ export function getNextSlotAfter(from: Date): Date {
 
 export function getMinStartDateTimeLocal(from = new Date()): string {
   return dateToLocalDateTimeInput(getNextSlotAfter(from));
+}
+
+/** Ensures the reservation's booked start remains selectable while it is still in the future. */
+export function getEditMinStartDateTimeLocal(reservationStartIso: string, now = new Date()): string {
+  const minFromNow = getMinStartDateTimeLocal(now);
+  const reservationStart = new Date(reservationStartIso);
+  if (reservationStart <= now) {
+    return minFromNow;
+  }
+
+  const bookedStartLocal = dateToLocalDateTimeInput(reservationStart);
+  return isLocalDateTimeBefore(bookedStartLocal, minFromNow) ? bookedStartLocal : minFromNow;
 }
 
 export function getMinEndDateTimeLocal(startLocal: string): string {

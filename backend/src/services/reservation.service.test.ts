@@ -209,6 +209,9 @@ describe('ReservationService', () => {
   });
 
   it('updates reservation when rescheduling without overlap', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2030-01-01T09:00:00Z'));
+
     vi.mocked(reservationRepository.findById).mockResolvedValue(mockReservation);
     vi.mocked(userRepository.existsActive).mockResolvedValue(true);
     vi.mocked(resourceRepository.findById).mockResolvedValue({
@@ -244,6 +247,68 @@ describe('ReservationService', () => {
       new Date('2030-01-01T13:00:00.000Z'),
       'res-1',
     );
+
+    vi.useRealTimers();
+  });
+
+  it('allows extending end time while overlapping the original booking window before start', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2030-01-01T09:00:00Z'));
+
+    vi.mocked(reservationRepository.findById).mockResolvedValue(mockReservation);
+    vi.mocked(userRepository.existsActive).mockResolvedValue(true);
+    vi.mocked(resourceRepository.findById).mockResolvedValue({
+      id: 'resource-1',
+      name: 'Room A',
+      description: null,
+      type: ResourceType.ROOM,
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    vi.mocked(reservationRepository.findOverlapping).mockResolvedValue(null);
+    vi.mocked(reservationRepository.update).mockResolvedValue({
+      ...mockReservation,
+      endTime: new Date('2030-01-01T12:00:00Z'),
+    });
+
+    const result = await reservationService.updateReservation(
+      'res-1',
+      {
+        startTime: '2030-01-01T10:00:00.000Z',
+        endTime: '2030-01-01T12:00:00.000Z',
+      },
+      'user-1',
+      UserRole.USER,
+    );
+
+    expect(result.endTime).toEqual(new Date('2030-01-01T12:00:00Z'));
+    expect(reservationRepository.findOverlapping).toHaveBeenCalledWith(
+      'resource-1',
+      new Date('2030-01-01T10:00:00.000Z'),
+      new Date('2030-01-01T12:00:00.000Z'),
+      'res-1',
+    );
+
+    vi.useRealTimers();
+  });
+
+  it('rejects update when the reservation has already started', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2030-01-01T10:30:00Z'));
+    vi.mocked(reservationRepository.findById).mockResolvedValue(mockReservation);
+
+    await expect(
+      reservationService.updateReservation(
+        'res-1',
+        { endTime: '2030-01-01T12:00:00.000Z' },
+        'user-1',
+        UserRole.USER,
+      ),
+    ).rejects.toThrow(ValidationError);
+
+    expect(reservationRepository.update).not.toHaveBeenCalled();
+    vi.useRealTimers();
   });
 
   it('rejects update on cancelled reservation', async () => {

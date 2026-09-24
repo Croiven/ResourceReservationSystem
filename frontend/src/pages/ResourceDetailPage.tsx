@@ -26,11 +26,13 @@ import { formatDateTimeRange, toIsoDateTime } from '../utils/dateTime';
 import { getResourceTypeLabel } from '../utils/resourceLabels';
 import {
   formatSlotDuration,
+  getLocalSlotRangeFeedback,
   getMinEndDateTimeLocal,
   getMinStartDateTimeLocal,
   getSlotDurationMinutes,
   isLocalDateTimeBefore,
   isValidSlotRange,
+  slotAvailabilityFeedback,
 } from '../utils/slotTime';
 
 function formatDate(value: string): string {
@@ -126,6 +128,7 @@ export function ResourceDetailPage() {
     const loadBookings = async () => {
       setBookingsLoading(true);
       setBookingsError(null);
+      setBookings([]);
 
       try {
         const data = await resourceApi.getResourceBookings(id, from, to);
@@ -161,8 +164,9 @@ export function ResourceDetailPage() {
       return;
     }
 
-    if (!isValidSlotRange(startTime, endTime)) {
-      setAvailabilityMessage('Choose a start time on the hour or half-hour.');
+    const localFeedback = getLocalSlotRangeFeedback(startTime, endTime);
+    if (localFeedback) {
+      setAvailabilityMessage(localFeedback.message);
       return;
     }
 
@@ -174,9 +178,7 @@ export function ResourceDetailPage() {
             toIsoDateTime(startTime),
             toIsoDateTime(endTime),
           );
-          setAvailabilityMessage(
-            result.available ? 'This time slot is available.' : 'This time slot is already booked.',
-          );
+          setAvailabilityMessage(slotAvailabilityFeedback(result.available).message);
         } catch {
           setAvailabilityMessage(null);
         }
@@ -288,23 +290,16 @@ export function ResourceDetailPage() {
                 <Stack spacing={2}>
                   {bookingsError && <Alert severity="error">{bookingsError}</Alert>}
 
-                  {bookingsLoading ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                      <CircularProgress size={28} />
-                    </Box>
-                  ) : (
-                    <>
-                      <ResourceBookingsCalendar
-                        bookings={bookings}
-                        weekStart={weekStart}
-                        onWeekChange={setWeekStart}
-                      />
-                      {bookings.length === 0 && (
-                        <Typography color="text.secondary" sx={{ textAlign: 'center' }}>
-                          No bookings in this week.
-                        </Typography>
-                      )}
-                    </>
+                  <ResourceBookingsCalendar
+                    bookings={bookings}
+                    weekStart={weekStart}
+                    onWeekChange={setWeekStart}
+                    loading={bookingsLoading}
+                  />
+                  {!bookingsLoading && bookings.length === 0 && (
+                    <Typography color="text.secondary" sx={{ textAlign: 'center' }}>
+                      No bookings in this week.
+                    </Typography>
                   )}
                 </Stack>
               </CardContent>
@@ -329,8 +324,7 @@ export function ResourceDetailPage() {
                       {availabilityMessage && (
                         <Alert
                           severity={
-                            availabilityMessage.includes('available') &&
-                            !availabilityMessage.includes('already')
+                            availabilityMessage === 'This time slot is available.'
                               ? 'success'
                               : 'warning'
                           }

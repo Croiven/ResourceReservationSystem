@@ -50,7 +50,9 @@ export async function checkAvailability(
   endTime: string,
   excludeReservationId?: string,
 ): Promise<AvailabilityResult> {
-  const params = new URLSearchParams({ startTime, endTime });
+  const params = new URLSearchParams();
+  params.set('startTime', startTime);
+  params.set('endTime', endTime);
   if (excludeReservationId) {
     params.set('excludeReservationId', excludeReservationId);
   }

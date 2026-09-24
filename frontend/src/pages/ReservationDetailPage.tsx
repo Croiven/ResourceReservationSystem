@@ -23,6 +23,7 @@ import type { Reservation } from '../types/reservation';
 import { ApiError } from '../types/api';
 import { formatDateTimeRange } from '../utils/dateTime';
 import { getReservationStatusLabel, getStatusChipColor } from '../utils/reservationLabels';
+import { isReservationCancellable, isReservationEditable } from '../utils/reservationRules';
 
 export function ReservationDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -103,7 +104,8 @@ export function ReservationDetailPage() {
     }
   };
 
-  const isActive = reservation?.status !== 'CANCELLED';
+  const canEdit = reservation ? isReservationEditable(reservation) : false;
+  const canCancel = reservation ? isReservationCancellable(reservation) : false;
 
   return (
     <AppLayout maxWidth="md">
@@ -149,10 +151,15 @@ export function ReservationDetailPage() {
                   {reservation.notes ?? 'No notes provided.'}
                 </Typography>
                 <Stack direction="row" spacing={1}>
-                  <Button variant="contained" disabled={!isActive} onClick={() => setEditOpen(true)}>
+                  <Button variant="contained" disabled={!canEdit} onClick={() => setEditOpen(true)}>
                     Edit
                   </Button>
-                  <Button variant="outlined" color="error" disabled={!isActive} onClick={() => setCancelOpen(true)}>
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    disabled={!canCancel}
+                    onClick={() => setCancelOpen(true)}
+                  >
                     Cancel reservation
                   </Button>
                 </Stack>

@@ -18,8 +18,14 @@ export interface ResourceBookingSlot {
   status: 'PENDING' | 'CONFIRMED' | 'CANCELLED';
 }
 
+export type AvailabilityUnavailableReason =
+  | 'RESOURCE_INACTIVE'
+  | 'START_IN_PAST'
+  | 'OVERLAP';
+
 export interface AvailabilityResult {
   available: boolean;
+  reason?: AvailabilityUnavailableReason;
 }
 
 export class ResourceService {
@@ -101,7 +107,7 @@ export class ResourceService {
     }
 
     if (!resource.isActive) {
-      return { available: false };
+      return { available: false, reason: 'RESOURCE_INACTIVE' };
     }
 
     const startTime = new Date(query.startTime);
@@ -114,7 +120,7 @@ export class ResourceService {
     }
 
     if (startTime < new Date()) {
-      return { available: false };
+      return { available: false, reason: 'START_IN_PAST' };
     }
 
     const overlap = await reservationRepository.findOverlapping(
@@ -124,7 +130,11 @@ export class ResourceService {
       query.excludeReservationId,
     );
 
-    return { available: overlap === null };
+    if (overlap) {
+      return { available: false, reason: 'OVERLAP' };
+    }
+
+    return { available: true };
   }
 }
 

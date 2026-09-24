@@ -100,6 +100,10 @@ export class ReservationService {
       throw new ValidationError('Cannot update a cancelled reservation');
     }
 
+    if (reservation.startTime <= new Date()) {
+      throw new ValidationError('Cannot edit a reservation that has already started');
+    }
+
     const startTime = data.startTime ? new Date(data.startTime) : reservation.startTime;
     const endTime = data.endTime ? new Date(data.endTime) : reservation.endTime;
 
