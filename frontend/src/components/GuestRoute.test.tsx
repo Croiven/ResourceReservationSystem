@@ -1,7 +1,7 @@
 import { screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '../test/renderWithProviders';
-import { ProtectedRoute } from './ProtectedRoute';
+import { GuestRoute } from './GuestRoute';
 
 vi.mock('../hooks/useAuth', () => ({
   useAuth: vi.fn(),
@@ -9,29 +9,8 @@ vi.mock('../hooks/useAuth', () => ({
 
 import { useAuth } from '../hooks/useAuth';
 
-describe('ProtectedRoute', () => {
-  it('renders children when authenticated', () => {
-    vi.mocked(useAuth).mockReturnValue({
-      user: null,
-      isAuthenticated: true,
-      isLoading: false,
-      login: vi.fn(),
-      register: vi.fn(),
-      logout: vi.fn(),
-      changePassword: vi.fn(),
-      refreshUser: vi.fn(),
-    });
-
-    renderWithProviders(
-      <ProtectedRoute>
-        <div>Protected content</div>
-      </ProtectedRoute>,
-    );
-
-    expect(screen.getByText('Protected content')).toBeInTheDocument();
-  });
-
-  it('redirects when unauthenticated', () => {
+describe('GuestRoute', () => {
+  it('renders children when logged out', () => {
     vi.mocked(useAuth).mockReturnValue({
       user: null,
       isAuthenticated: false,
@@ -44,13 +23,34 @@ describe('ProtectedRoute', () => {
     });
 
     renderWithProviders(
-      <ProtectedRoute>
-        <div>Protected content</div>
-      </ProtectedRoute>,
-      { route: '/profile' },
+      <GuestRoute>
+        <div>Guest content</div>
+      </GuestRoute>,
     );
 
-    expect(screen.queryByText('Protected content')).not.toBeInTheDocument();
+    expect(screen.getByText('Guest content')).toBeInTheDocument();
+  });
+
+  it('redirects authenticated users away from guest routes', () => {
+    vi.mocked(useAuth).mockReturnValue({
+      user: null,
+      isAuthenticated: true,
+      isLoading: false,
+      login: vi.fn(),
+      register: vi.fn(),
+      logout: vi.fn(),
+      changePassword: vi.fn(),
+      refreshUser: vi.fn(),
+    });
+
+    renderWithProviders(
+      <GuestRoute>
+        <div>Guest content</div>
+      </GuestRoute>,
+      { route: '/login' },
+    );
+
+    expect(screen.queryByText('Guest content')).not.toBeInTheDocument();
   });
 
   it('shows loading indicator while auth is loading', () => {
@@ -66,12 +66,12 @@ describe('ProtectedRoute', () => {
     });
 
     renderWithProviders(
-      <ProtectedRoute>
-        <div>Protected content</div>
-      </ProtectedRoute>,
+      <GuestRoute>
+        <div>Guest content</div>
+      </GuestRoute>,
     );
 
     expect(screen.getByRole('progressbar')).toBeInTheDocument();
-    expect(screen.queryByText('Protected content')).not.toBeInTheDocument();
+    expect(screen.queryByText('Guest content')).not.toBeInTheDocument();
   });
 });

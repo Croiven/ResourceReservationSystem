@@ -168,4 +168,37 @@ describe('AuthService', () => {
       }),
     ).rejects.toThrow(ValidationError);
   });
+
+  it('logs out by revoking refresh token hash', async () => {
+    await authService.logout('refresh-token');
+
+    expect(refreshTokenRepository.revokeByHash).toHaveBeenCalled();
+  });
+
+  it('rejects refresh when stored token is missing', async () => {
+    vi.mocked(verifyRefreshToken).mockReturnValue({
+      sub: 'user-1',
+      email: 'user@example.com',
+      role: UserRole.USER,
+    });
+    vi.mocked(refreshTokenRepository.findValid).mockResolvedValue(null);
+
+    await expect(authService.refresh('refresh-token')).rejects.toThrow(UnauthorizedError);
+  });
+
+  it('rejects refresh when refresh token is invalid', async () => {
+    vi.mocked(verifyRefreshToken).mockImplementation(() => {
+      throw new Error('invalid');
+    });
+
+    await expect(authService.refresh('bad-token')).rejects.toThrow(UnauthorizedError);
+  });
+
+  it('returns user profile from getMe', async () => {
+    vi.mocked(userRepository.findById).mockResolvedValue(mockUser);
+
+    const result = await authService.getMe('user-1');
+
+    expect(result.email).toBe('user@example.com');
+  });
 });

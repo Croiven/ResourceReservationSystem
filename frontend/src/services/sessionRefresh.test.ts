@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { refreshAuthTokens } from './sessionRefresh';
+import { notifySessionExpired, refreshAuthTokens } from './sessionRefresh';
 import { getTokens, setTokens } from './tokenStorage';
 
 describe('refreshAuthTokens', () => {
@@ -36,5 +36,35 @@ describe('refreshAuthTokens', () => {
     expect(b.accessToken).toBe('new-access');
     expect(mockFetch).toHaveBeenCalledTimes(1);
     expect(getTokens()?.accessToken).toBe('new-access');
+  });
+
+  it('throws when no refresh token is available', async () => {
+    await expect(refreshAuthTokens()).rejects.toMatchObject({ statusCode: 401 });
+  });
+
+  it('throws when refresh endpoint fails', async () => {
+    setTokens({ accessToken: 'old-access', refreshToken: 'old-refresh' });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 401,
+      } as Response),
+    );
+
+    await expect(refreshAuthTokens('old-refresh')).rejects.toMatchObject({ statusCode: 401 });
+  });
+
+  it('notifySessionExpired clears tokens and dispatches event', () => {
+    setTokens({ accessToken: 'access', refreshToken: 'refresh' });
+    const handler = vi.fn();
+    window.addEventListener('auth:session-expired', handler);
+
+    notifySessionExpired();
+
+    expect(getTokens()).toBeNull();
+    expect(handler).toHaveBeenCalled();
+
+    window.removeEventListener('auth:session-expired', handler);
   });
 });

@@ -1,56 +1,75 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { login, register } from './authApi';
+import {
+  changePassword,
+  getMe,
+  login,
+  logout,
+  refresh,
+  register,
+} from './authApi';
+
+vi.mock('./apiClient', () => ({
+  apiRequest: vi.fn(),
+}));
+
+vi.mock('./sessionRefresh', () => ({
+  refreshAuthTokens: vi.fn(),
+}));
+
+import { apiRequest } from './apiClient';
+import { refreshAuthTokens } from './sessionRefresh';
 
 describe('authApi', () => {
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
-  it('calls login endpoint', async () => {
-    const mockFetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          data: { accessToken: 'a', refreshToken: 'r', expiresIn: 900 },
-        }),
-    });
-    vi.stubGlobal('fetch', mockFetch);
-
-    const result = await login({ email: 'user@example.com', password: 'password123' });
-
-    expect(result.accessToken).toBe('a');
-    expect(mockFetch).toHaveBeenCalledWith(
-      '/api/auth/login',
-      expect.objectContaining({ method: 'POST' }),
-    );
+  it('registers a user', async () => {
+    vi.mocked(apiRequest).mockResolvedValue({ id: '1' });
+    await expect(
+      register({
+        email: 'user@example.com',
+        password: 'password123',
+        firstName: 'User',
+        lastName: 'Test',
+      }),
+    ).resolves.toEqual({ id: '1' });
   });
 
-  it('calls register endpoint', async () => {
-    const mockFetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          data: {
-            id: '1',
-            email: 'user@example.com',
-            firstName: 'User',
-            lastName: 'Test',
-            role: 'USER',
-            isActive: true,
-            createdAt: '',
-            updatedAt: '',
-          },
-        }),
+  it('logs in and returns tokens', async () => {
+    vi.mocked(apiRequest).mockResolvedValue({ accessToken: 'a', refreshToken: 'r', expiresIn: 900 });
+    await expect(login({ email: 'user@example.com', password: 'password123' })).resolves.toEqual({
+      accessToken: 'a',
+      refreshToken: 'r',
+      expiresIn: 900,
     });
-    vi.stubGlobal('fetch', mockFetch);
+  });
 
-    const result = await register({
-      email: 'user@example.com',
-      password: 'password123',
-      firstName: 'User',
-      lastName: 'Test',
+  it('logs out with refresh token', async () => {
+    vi.mocked(apiRequest).mockResolvedValue({ message: 'ok' });
+    await logout('refresh');
+    expect(apiRequest).toHaveBeenCalledWith('/auth/logout', expect.objectContaining({ method: 'POST' }));
+  });
+
+  it('refreshes tokens via session helper', async () => {
+    vi.mocked(refreshAuthTokens).mockResolvedValue({
+      accessToken: 'new',
+      refreshToken: 'refresh',
+      expiresIn: 900,
     });
+    await expect(refresh('refresh')).resolves.toEqual({
+      accessToken: 'new',
+      refreshToken: 'refresh',
+      expiresIn: 900,
+    });
+  });
 
-    expect(result.email).toBe('user@example.com');
+  it('loads current user and changes password', async () => {
+    vi.mocked(apiRequest).mockResolvedValueOnce({ id: '1' }).mockResolvedValueOnce({ message: 'changed' });
+
+    await expect(getMe('token')).resolves.toEqual({ id: '1' });
+    await expect(
+      changePassword('token', { currentPassword: 'old', newPassword: 'newpassword' }),
+    ).resolves.toEqual({ message: 'changed' });
   });
 });

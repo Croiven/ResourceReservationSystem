@@ -78,4 +78,23 @@ describe('UserService', () => {
       userService.updateUser('missing', { firstName: 'Test' }, 'admin-1'),
     ).rejects.toThrow(NotFoundError);
   });
+
+  it('lists and deactivates other users', async () => {
+    vi.mocked(userRepository.findAll).mockResolvedValue([mockUser]);
+    vi.mocked(userRepository.findById).mockResolvedValue({
+      ...mockUser,
+      id: 'user-2',
+      role: UserRole.USER,
+    });
+    vi.mocked(userRepository.deactivate).mockResolvedValue({
+      ...mockUser,
+      id: 'user-2',
+      isActive: false,
+    });
+
+    await expect(userService.listUsers()).resolves.toHaveLength(1);
+    await expect(userService.deactivateUser('user-2', 'admin-1')).resolves.toMatchObject({
+      isActive: false,
+    });
+  });
 });
