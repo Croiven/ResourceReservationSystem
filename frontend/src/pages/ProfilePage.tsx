@@ -8,7 +8,7 @@ import ListItem from '@mui/material/ListItem';
 import ListItemText from '@mui/material/ListItemText';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
-import { type FormEvent, useState } from 'react';
+import { type SyntheticEvent, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '../components/AppLayout';
 import { useAuth } from '../hooks/useAuth';
@@ -47,7 +47,7 @@ export function ProfilePage() {
     return Object.keys(errors).length === 0;
   };
 
-  const handleSubmit = async (event: FormEvent) => {
+  const handleSubmit = async (event: SyntheticEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
     setSuccess(null);

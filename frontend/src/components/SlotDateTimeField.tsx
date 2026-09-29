@@ -32,7 +32,7 @@ export function SlotDateTimeField({
   helperText = 'Select a date and a time on the hour or half-hour',
   required = false,
   disabled = false,
-}: SlotDateTimeFieldProps) {
+}: Readonly<SlotDateTimeFieldProps>) {
   const { date, time } = splitLocalDateTime(value);
   const minDate = getMinDateLocal(min);
   const availableTimes = useMemo(

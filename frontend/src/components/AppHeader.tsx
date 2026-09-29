@@ -41,7 +41,7 @@ const ADMIN_LINKS: NavLink[] = [
   { label: 'All reservations', to: '/admin/reservations' },
 ];
 
-function NavButton({ label, to }: NavLink) {
+function NavButton({ label, to }: Readonly<NavLink>) {
   const location = useLocation();
   const isActive = location.pathname === to || (to !== '/' && location.pathname.startsWith(`${to}/`));
 

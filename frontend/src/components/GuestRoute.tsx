@@ -8,7 +8,7 @@ interface GuestRouteProps {
   children: ReactNode;
 }
 
-export function GuestRoute({ children }: GuestRouteProps) {
+export function GuestRoute({ children }: Readonly<GuestRouteProps>) {
   const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {

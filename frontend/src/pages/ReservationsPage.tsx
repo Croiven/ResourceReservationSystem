@@ -1,13 +1,5 @@
 import Alert from '@mui/material/Alert';
-import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import Chip from '@mui/material/Chip';
-import CircularProgress from '@mui/material/CircularProgress';
-import Dialog from '@mui/material/Dialog';
-import DialogActions from '@mui/material/DialogActions';
-import DialogContent from '@mui/material/DialogContent';
-import DialogContentText from '@mui/material/DialogContentText';
-import DialogTitle from '@mui/material/DialogTitle';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
@@ -24,19 +16,18 @@ import Typography from '@mui/material/Typography';
 import { useCallback, useEffect, useState } from 'react';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { AppLayout } from '../components/AppLayout';
+import { ReservationCancelDialog } from '../components/ReservationCancelDialog';
 import { ReservationEditDialog } from '../components/ReservationEditDialog';
+import { ReservationRowActions } from '../components/ReservationRowActions';
+import { ReservationStatusChip } from '../components/ReservationStatusChip';
+import { useReservationCancelFlow } from '../hooks/useReservationCancelFlow';
 import * as reservationApi from '../services/reservationApi';
 import { getTokens } from '../services/tokenStorage';
 import type { Reservation } from '../types/reservation';
 import { ApiError } from '../types/api';
 import { formatDateTimeRange } from '../utils/dateTime';
-import {
-  getReservationStatusLabel,
-  getStatusChipColor,
-  STATUS_FILTER_OPTIONS,
-  type StatusFilter,
-} from '../utils/reservationLabels';
-import { isReservationCancellable, isReservationEditable } from '../utils/reservationRules';
+import { listQueryContent } from '../utils/queryStateContent';
+import { STATUS_FILTER_OPTIONS, type StatusFilter } from '../utils/reservationLabels';
 
 export function ReservationsPage() {
   const navigate = useNavigate();
@@ -45,8 +36,6 @@ export function ReservationsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editReservation, setEditReservation] = useState<Reservation | null>(null);
-  const [cancelReservation, setCancelReservation] = useState<Reservation | null>(null);
-  const [isCancelling, setIsCancelling] = useState(false);
 
   const loadReservations = useCallback(async () => {
     const tokens = getTokens();
@@ -79,27 +68,12 @@ export function ReservationsPage() {
     void loadReservations();
   }, [loadReservations]);
 
-  const handleCancelConfirm = async () => {
-    if (!cancelReservation) return;
-
-    const tokens = getTokens();
-    if (!tokens?.accessToken) return;
-
-    setIsCancelling(true);
-    try {
-      await reservationApi.cancelReservation(cancelReservation.id, tokens.accessToken);
-      setCancelReservation(null);
-      await loadReservations();
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message);
-      } else {
-        setError('Unable to cancel reservation. Please try again.');
-      }
-    } finally {
-      setIsCancelling(false);
-    }
-  };
+  const {
+    cancelReservation,
+    setCancelReservation,
+    isCancelling,
+    handleCancelConfirm,
+  } = useReservationCancelFlow(loadReservations, setError);
 
   return (
     <AppLayout maxWidth="lg">
@@ -130,18 +104,15 @@ export function ReservationsPage() {
 
         {error && <Alert severity="error">{error}</Alert>}
 
-        {isLoading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
-            <CircularProgress />
-          </Box>
-        ) : reservations.length === 0 ? (
+        {listQueryContent(
+          isLoading,
+          reservations.length === 0,
           <Stack spacing={2} sx={{ alignItems: 'flex-start' }}>
             <Typography color="text.secondary">You have no reservations.</Typography>
             <Button variant="contained" component={RouterLink} to="/resources">
               Browse resources
             </Button>
-          </Stack>
-        ) : (
+          </Stack>,
           <TableContainer component={Paper}>
             <Table>
               <TableHead>
@@ -165,43 +136,20 @@ export function ReservationsPage() {
                     <TableCell>{reservation.resource.name}</TableCell>
                     <TableCell>{formatDateTimeRange(reservation.startTime, reservation.endTime)}</TableCell>
                     <TableCell>
-                      <Chip
-                        label={getReservationStatusLabel(reservation.status)}
-                        color={getStatusChipColor(reservation.status)}
-                        size="small"
-                        variant={reservation.status === 'CANCELLED' ? 'outlined' : 'filled'}
-                      />
+                      <ReservationStatusChip reservation={reservation} />
                     </TableCell>
                     <TableCell align="right">
-                      <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
-                        <Button
-                          size="small"
-                          disabled={!isReservationEditable(reservation)}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            setEditReservation(reservation);
-                          }}
-                        >
-                          Edit
-                        </Button>
-                        <Button
-                          size="small"
-                          color="error"
-                          disabled={!isReservationCancellable(reservation)}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            setCancelReservation(reservation);
-                          }}
-                        >
-                          Cancel
-                        </Button>
-                      </Stack>
+                      <ReservationRowActions
+                        reservation={reservation}
+                        onEdit={setEditReservation}
+                        onCancel={setCancelReservation}
+                      />
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-          </TableContainer>
+          </TableContainer>,
         )}
       </Stack>
 
@@ -218,22 +166,16 @@ export function ReservationsPage() {
         />
       )}
 
-      <Dialog open={cancelReservation !== null} onClose={() => setCancelReservation(null)}>
-        <DialogTitle>Cancel reservation?</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            This will cancel your booking for {cancelReservation?.resource.name}. This action cannot be undone.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setCancelReservation(null)} disabled={isCancelling}>
-            Keep reservation
-          </Button>
-          <Button onClick={() => void handleCancelConfirm()} color="error" disabled={isCancelling}>
-            {isCancelling ? 'Cancelling…' : 'Cancel reservation'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <ReservationCancelDialog
+        open={cancelReservation !== null}
+        onClose={() => {
+          setCancelReservation(null);
+        }}
+        onConfirm={handleCancelConfirm}
+        isCancelling={isCancelling}
+      >
+        This will cancel your booking for {cancelReservation?.resource.name}. This action cannot be undone.
+      </ReservationCancelDialog>
     </AppLayout>
   );
 }

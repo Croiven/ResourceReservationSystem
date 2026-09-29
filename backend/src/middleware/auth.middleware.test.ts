@@ -56,4 +56,57 @@ describe('authenticate middleware', () => {
 
     expect(next).toHaveBeenCalledWith(expect.any(UnauthorizedError));
   });
+
+  it('calls next with UnauthorizedError when header is not Bearer', async () => {
+    const req = { headers: { authorization: 'Basic abc' } } as AuthenticatedRequest;
+    const next = vi.fn();
+
+    await authenticate(req, {} as Response, next as NextFunction);
+
+    expect(next).toHaveBeenCalledWith(expect.any(UnauthorizedError));
+  });
+
+  it('calls next with UnauthorizedError when user is inactive', async () => {
+    vi.mocked(verifyAccessToken).mockReturnValue({
+      sub: 'user-1',
+      email: 'user@example.com',
+      role: UserRole.USER,
+    });
+    vi.mocked(userRepository.findById).mockResolvedValue({
+      id: 'user-1',
+      email: 'user@example.com',
+      passwordHash: 'hash',
+      firstName: 'Regular',
+      lastName: 'User',
+      role: UserRole.USER,
+      isActive: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    const req = {
+      headers: { authorization: 'Bearer valid-token' },
+    } as AuthenticatedRequest;
+    const next = vi.fn();
+
+    await authenticate(req, {} as Response, next as NextFunction);
+
+    expect(next).toHaveBeenCalledWith(expect.any(UnauthorizedError));
+  });
+
+  it('calls next with UnauthorizedError when token verification fails', async () => {
+    vi.mocked(verifyAccessToken).mockImplementation(() => {
+      throw new Error('invalid');
+    });
+
+    const req = {
+      headers: { authorization: 'Bearer bad-token' },
+    } as AuthenticatedRequest;
+    const next = vi.fn();
+
+    await authenticate(req, {} as Response, next as NextFunction);
+
+    expect(next).toHaveBeenCalledWith(expect.any(UnauthorizedError));
+    expect(next.mock.calls[0]?.[0]).toHaveProperty('message', 'Invalid or expired token');
+  });
 });

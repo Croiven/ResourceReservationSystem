@@ -180,8 +180,7 @@ export function getAllTimeSlotValues(): string[] {
   const slots: string[] = [];
   for (let hour = 0; hour < 24; hour += 1) {
     const hourLabel = String(hour).padStart(2, '0');
-    slots.push(`${hourLabel}:00`);
-    slots.push(`${hourLabel}:30`);
+    slots.push(`${hourLabel}:00`, `${hourLabel}:30`);
   }
   return slots;
 }

@@ -20,7 +20,7 @@ export function AuthFormLayout({
   success,
   children,
   footer,
-}: AuthFormLayoutProps) {
+}: Readonly<AuthFormLayoutProps>) {
   return (
     <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
       <Paper elevation={2} sx={{ p: 4, width: '100%', maxWidth: 440 }}>

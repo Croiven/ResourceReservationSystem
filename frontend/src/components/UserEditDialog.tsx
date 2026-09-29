@@ -30,7 +30,13 @@ interface UserEditDialogProps {
   onSuccess: (user: User) => void;
 }
 
-export function UserEditDialog({ open, user, isSelf, onClose, onSuccess }: UserEditDialogProps) {
+export function UserEditDialog({
+  open,
+  user,
+  isSelf,
+  onClose,
+  onSuccess,
+}: Readonly<UserEditDialogProps>) {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [role, setRole] = useState<UserRole>('USER');

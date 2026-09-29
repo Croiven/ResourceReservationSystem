@@ -3,7 +3,7 @@ import Link from '@mui/material/Link';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import { type FormEvent, useState } from 'react';
+import { type SyntheticEvent, useState } from 'react';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { AppLayout } from '../components/AppLayout';
 import { AuthFormLayout } from '../components/AuthFormLayout';
@@ -37,7 +37,7 @@ export function RegisterPage() {
     return Object.keys(errors).length === 0;
   };
 
-  const handleSubmit = async (event: FormEvent) => {
+  const handleSubmit = async (event: SyntheticEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
 

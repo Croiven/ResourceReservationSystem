@@ -92,4 +92,26 @@ describe('AdminRoute', () => {
 
     expect(screen.queryByText('Admin content')).not.toBeInTheDocument();
   });
+
+  it('shows loading indicator while auth is loading', () => {
+    vi.mocked(useAuth).mockReturnValue({
+      user: null,
+      isAuthenticated: false,
+      isLoading: true,
+      login: vi.fn(),
+      register: vi.fn(),
+      logout: vi.fn(),
+      changePassword: vi.fn(),
+      refreshUser: vi.fn(),
+    });
+
+    renderWithProviders(
+      <AdminRoute>
+        <div>Admin content</div>
+      </AdminRoute>,
+    );
+
+    expect(screen.getByRole('progressbar')).toBeInTheDocument();
+    expect(screen.queryByText('Admin content')).not.toBeInTheDocument();
+  });
 });

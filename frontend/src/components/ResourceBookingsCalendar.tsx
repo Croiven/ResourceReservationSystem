@@ -54,7 +54,7 @@ export function ResourceBookingsCalendar({
   weekStart,
   onWeekChange,
   loading = false,
-}: ResourceBookingsCalendarProps) {
+}: Readonly<ResourceBookingsCalendarProps>) {
   const weekDays = useMemo(
     () => Array.from({ length: 7 }, (_, index) => addDays(weekStart, index)),
     [weekStart],
@@ -63,8 +63,7 @@ export function ResourceBookingsCalendar({
   const timeSlots = useMemo(() => {
     const slots: Array<{ hour: number; minute: number }> = [];
     for (let hour = 0; hour < 24; hour += 1) {
-      slots.push({ hour, minute: 0 });
-      slots.push({ hour, minute: 30 });
+      slots.push({ hour, minute: 0 }, { hour, minute: 30 });
     }
     return slots;
   }, []);

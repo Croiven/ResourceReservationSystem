@@ -72,4 +72,41 @@ describe('reservationEditAvailability', () => {
     expect(feedback.message).toMatch(/no longer active/i);
     vi.restoreAllMocks();
   });
+
+  it('maps overlap to unavailable message', async () => {
+    vi.spyOn(resourceApi, 'checkAvailability').mockResolvedValue({
+      available: false,
+      reason: 'OVERLAP',
+    });
+
+    const feedback = await checkEditAvailability(baseReservation, '2030-01-01T12:00', '2030-01-01T14:00');
+    expect(feedback.message).toMatch(/overlaps another booking/i);
+    vi.restoreAllMocks();
+  });
+
+  it('maps start in past reason', async () => {
+    vi.spyOn(resourceApi, 'checkAvailability').mockResolvedValue({
+      available: false,
+      reason: 'START_IN_PAST',
+    });
+
+    const feedback = await checkEditAvailability(baseReservation, '2030-01-01T12:00', '2030-01-01T14:00');
+    expect(feedback.message).toMatch(/future/i);
+    vi.restoreAllMocks();
+  });
+
+  it('treats overlap inside original window as available', async () => {
+    vi.spyOn(resourceApi, 'checkAvailability').mockResolvedValue({
+      available: false,
+      reason: 'OVERLAP',
+    });
+
+    const feedback = await checkEditAvailability(
+      baseReservation,
+      toLocalDateTimeInput('2030-01-01T10:00:00.000Z'),
+      toLocalDateTimeInput('2030-01-01T10:30:00.000Z'),
+    );
+    expect(feedback.message).toMatch(/available/i);
+    vi.restoreAllMocks();
+  });
 });

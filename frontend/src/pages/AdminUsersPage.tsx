@@ -1,8 +1,6 @@
 import Alert from '@mui/material/Alert';
-import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
-import CircularProgress from '@mui/material/CircularProgress';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
@@ -25,6 +23,7 @@ import * as userApi from '../services/userApi';
 import { getTokens } from '../services/tokenStorage';
 import type { User } from '../types/user';
 import { ApiError } from '../types/api';
+import { listQueryContent } from '../utils/queryStateContent';
 import { getUserRoleChipColor, getUserRoleLabel } from '../utils/userLabels';
 
 export function AdminUsersPage() {
@@ -99,13 +98,10 @@ export function AdminUsersPage() {
 
         {error && <Alert severity="error">{error}</Alert>}
 
-        {isLoading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
-            <CircularProgress />
-          </Box>
-        ) : users.length === 0 ? (
-          <Typography color="text.secondary">No users found.</Typography>
-        ) : (
+        {listQueryContent(
+          isLoading,
+          users.length === 0,
+          <Typography color="text.secondary">No users found.</Typography>,
           <TableContainer component={Paper}>
             <Table>
               <TableHead>
@@ -170,7 +166,7 @@ export function AdminUsersPage() {
                 ))}
               </TableBody>
             </Table>
-          </TableContainer>
+          </TableContainer>,
         )}
       </Stack>
 

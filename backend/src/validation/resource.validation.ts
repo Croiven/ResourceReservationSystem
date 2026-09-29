@@ -4,14 +4,14 @@ import { z } from 'zod';
 export const createResourceSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().max(500).optional(),
-  type: z.nativeEnum(ResourceType),
+  type: z.enum(ResourceType),
 });
 
 export const updateResourceSchema = z
   .object({
     name: z.string().min(1).max(100).optional(),
     description: z.string().max(500).nullable().optional(),
-    type: z.nativeEnum(ResourceType).optional(),
+    type: z.enum(ResourceType).optional(),
     isActive: z.boolean().optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
@@ -24,19 +24,19 @@ export const resourceIdParamSchema = z.object({
 
 export const listResourcesQuerySchema = z.object({
   active: z.enum(['true', 'false']).optional(),
-  type: z.nativeEnum(ResourceType).optional(),
+  type: z.enum(ResourceType).optional(),
   search: z.string().trim().min(1).max(100).optional(),
 });
 
 export const resourceAvailabilityQuerySchema = z.object({
-  startTime: z.string().datetime(),
-  endTime: z.string().datetime(),
+  startTime: z.iso.datetime(),
+  endTime: z.iso.datetime(),
   excludeReservationId: z.string().min(1).optional(),
 });
 
 export const resourceBookingsQuerySchema = z.object({
-  from: z.string().datetime(),
-  to: z.string().datetime(),
+  from: z.iso.datetime(),
+  to: z.iso.datetime(),
 });
 
 export type CreateResourceInput = z.infer<typeof createResourceSchema>;

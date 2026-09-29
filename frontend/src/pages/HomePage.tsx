@@ -24,7 +24,13 @@ interface HomeNavCardProps {
   emphasized?: boolean;
 }
 
-function HomeNavCard({ to, title, description, icon, emphasized = false }: HomeNavCardProps) {
+function HomeNavCard({
+  to,
+  title,
+  description,
+  icon,
+  emphasized = false,
+}: Readonly<HomeNavCardProps>) {
   return (
     <Card
       variant="outlined"
@@ -60,7 +66,7 @@ function HomeNavCard({ to, title, description, icon, emphasized = false }: HomeN
   );
 }
 
-function NavGrid({ children }: { children: ReactNode }) {
+function NavGrid({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <Box
       sx={{

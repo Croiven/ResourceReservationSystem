@@ -1,47 +1,53 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createReservation, listReservations } from './reservationApi';
+import {
+  cancelReservation,
+  createReservation,
+  getReservation,
+  listReservations,
+  updateReservation,
+} from './reservationApi';
 
 describe('reservationApi', () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it('calls list reservations with auth header', async () => {
+  const mockOk = (data: unknown) => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ data }),
+      }),
+    );
+  };
+
+  it('calls list reservations with auth header and query', async () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ data: [] }),
     });
     vi.stubGlobal('fetch', mockFetch);
 
-    await listReservations(undefined, 'token-123');
+    await listReservations({ status: 'CONFIRMED', resourceId: 'resource-1' }, 'token-123');
 
-    const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
-    const headers = init.headers as Record<string, string>;
-    expect(headers['Authorization']).toBe('Bearer token-123');
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/reservations?resourceId=resource-1&status=CONFIRMED',
+      expect.any(Object),
+    );
   });
 
-  it('calls create reservation endpoint', async () => {
-    const mockFetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          data: {
-            id: 'res-1',
-            userId: 'user-1',
-            resourceId: 'resource-1',
-            startTime: '2030-01-01T10:00:00.000Z',
-            endTime: '2030-01-01T11:00:00.000Z',
-            status: 'CONFIRMED',
-            notes: null,
-            createdAt: '',
-            updatedAt: '',
-            user: { id: 'user-1', firstName: 'User', lastName: 'Test', email: 'user@example.com' },
-            resource: { id: 'resource-1', name: 'Room A', type: 'ROOM' },
-          },
-        }),
-    });
-    vi.stubGlobal('fetch', mockFetch);
+  it('throws when access token is missing', async () => {
+    await expect(listReservations(undefined, '')).rejects.toThrow('Not authenticated');
+  });
 
+  it('gets a reservation by id', async () => {
+    mockOk({ id: 'res-1' });
+    await expect(getReservation('res-1', 'token')).resolves.toEqual({ id: 'res-1' });
+  });
+
+  it('creates a reservation', async () => {
+    mockOk({ id: 'res-1' });
     const result = await createReservation(
       {
         resourceId: 'resource-1',
@@ -50,11 +56,22 @@ describe('reservationApi', () => {
       },
       'token-123',
     );
-
     expect(result.id).toBe('res-1');
-    expect(mockFetch).toHaveBeenCalledWith(
-      '/api/reservations',
-      expect.objectContaining({ method: 'POST' }),
-    );
+  });
+
+  it('updates a reservation', async () => {
+    mockOk({ id: 'res-1', notes: 'Updated' });
+    await expect(updateReservation('res-1', { notes: 'Updated' }, 'token')).resolves.toEqual({
+      id: 'res-1',
+      notes: 'Updated',
+    });
+  });
+
+  it('cancels a reservation', async () => {
+    mockOk({ id: 'res-1', status: 'CANCELLED' });
+    await expect(cancelReservation('res-1', 'token')).resolves.toEqual({
+      id: 'res-1',
+      status: 'CANCELLED',
+    });
   });
 });

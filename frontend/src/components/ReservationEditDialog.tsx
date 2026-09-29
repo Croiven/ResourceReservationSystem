@@ -44,7 +44,7 @@ export function ReservationEditDialog({
   reservation,
   onClose,
   onSuccess,
-}: ReservationEditDialogProps) {
+}: Readonly<ReservationEditDialogProps>) {
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [notes, setNotes] = useState('');

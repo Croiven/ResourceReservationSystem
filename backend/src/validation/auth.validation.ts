@@ -2,14 +2,14 @@ import { UserRole } from '@prisma/client';
 import { z } from 'zod';
 
 export const registerSchema = z.object({
-  email: z.string().email(),
+  email: z.email(),
   password: z.string().min(8),
   firstName: z.string().min(1).max(100),
   lastName: z.string().min(1).max(100),
 });
 
 export const loginSchema = z.object({
-  email: z.string().email(),
+  email: z.email(),
   password: z.string().min(1),
 });
 
@@ -26,7 +26,7 @@ export const updateUserSchema = z
   .object({
     firstName: z.string().min(1).max(100).optional(),
     lastName: z.string().min(1).max(100).optional(),
-    role: z.nativeEnum(UserRole).optional(),
+    role: z.enum(UserRole).optional(),
     isActive: z.boolean().optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
