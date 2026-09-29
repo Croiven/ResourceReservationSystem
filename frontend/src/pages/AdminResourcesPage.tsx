@@ -1,9 +1,7 @@
 import AddIcon from '@mui/icons-material/Add';
 import Alert from '@mui/material/Alert';
-import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
-import CircularProgress from '@mui/material/CircularProgress';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
@@ -36,6 +34,7 @@ import {
   RESOURCE_TYPE_OPTIONS,
   type ActiveFilter,
 } from '../utils/resourceLabels';
+import { listQueryContent } from '../utils/queryStateContent';
 
 function buildQuery(
   search: string,
@@ -227,13 +226,10 @@ export function AdminResourcesPage() {
 
         {error && <Alert severity="error">{error}</Alert>}
 
-        {isLoading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
-            <CircularProgress />
-          </Box>
-        ) : resources.length === 0 ? (
-          <Typography color="text.secondary">No resources match your filters.</Typography>
-        ) : (
+        {listQueryContent(
+          isLoading,
+          resources.length === 0,
+          <Typography color="text.secondary">No resources match your filters.</Typography>,
           <TableContainer component={Paper}>
             <Table>
               <TableHead>
@@ -299,7 +295,7 @@ export function AdminResourcesPage() {
                 ))}
               </TableBody>
             </Table>
-          </TableContainer>
+          </TableContainer>,
         )}
       </Stack>
 

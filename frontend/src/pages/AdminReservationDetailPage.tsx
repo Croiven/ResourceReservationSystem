@@ -1,11 +1,8 @@
-import Alert from '@mui/material/Alert';
-import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import CardHeader from '@mui/material/CardHeader';
 import Chip from '@mui/material/Chip';
-import CircularProgress from '@mui/material/CircularProgress';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
@@ -23,6 +20,7 @@ import type { Reservation } from '../types/reservation';
 import { ApiError } from '../types/api';
 import { formatDateTimeRange } from '../utils/dateTime';
 import { getReservationStatusLabel, getStatusChipColor } from '../utils/reservationLabels';
+import { reservationDetailQueryContent } from '../utils/reservationDetailView';
 import { isReservationCancellable, isReservationEditable } from '../utils/reservationRules';
 
 export function AdminReservationDetailPage() {
@@ -107,6 +105,57 @@ export function AdminReservationDetailPage() {
   const canEdit = reservation ? isReservationEditable(reservation) : false;
   const canCancel = reservation ? isReservationCancellable(reservation) : false;
 
+  const detailCard = reservation ? (
+    <Card>
+      <CardHeader
+        title={reservation.resource.name}
+        subheader={formatDateTimeRange(reservation.startTime, reservation.endTime)}
+        action={
+          <Chip
+            label={getReservationStatusLabel(reservation.status)}
+            color={getStatusChipColor(reservation.status)}
+            size="small"
+            variant={reservation.status === 'CANCELLED' ? 'outlined' : 'filled'}
+          />
+        }
+      />
+      <CardContent>
+        <Stack spacing={2}>
+          <Typography variant="body2" color="text.secondary">
+            Booked by: {reservation.user.firstName} {reservation.user.lastName} ({reservation.user.email})
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Resource:{' '}
+            <Button
+              component={RouterLink}
+              to={`/resources/${reservation.resourceId}`}
+              size="small"
+              sx={{ p: 0, minWidth: 0, verticalAlign: 'baseline' }}
+            >
+              View resource
+            </Button>
+          </Typography>
+          <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
+            {reservation.notes ?? 'No notes provided.'}
+          </Typography>
+          <Stack direction="row" spacing={1}>
+            <Button variant="contained" disabled={!canEdit} onClick={() => setEditOpen(true)}>
+              Edit
+            </Button>
+            <Button
+              variant="outlined"
+              color="error"
+              disabled={!canCancel}
+              onClick={() => setCancelOpen(true)}
+            >
+              Cancel reservation
+            </Button>
+          </Stack>
+        </Stack>
+      </CardContent>
+    </Card>
+  ) : null;
+
   return (
     <AppLayout maxWidth="md">
       <Stack spacing={2}>
@@ -119,63 +168,7 @@ export function AdminReservationDetailPage() {
           Back to all reservations
         </Button>
 
-        {isLoading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
-            <CircularProgress />
-          </Box>
-        ) : error ? (
-          <Alert severity="error">{error}</Alert>
-        ) : reservation ? (
-          <Card>
-            <CardHeader
-              title={reservation.resource.name}
-              subheader={formatDateTimeRange(reservation.startTime, reservation.endTime)}
-              action={
-                <Chip
-                  label={getReservationStatusLabel(reservation.status)}
-                  color={getStatusChipColor(reservation.status)}
-                  size="small"
-                  variant={reservation.status === 'CANCELLED' ? 'outlined' : 'filled'}
-                />
-              }
-            />
-            <CardContent>
-              <Stack spacing={2}>
-                <Typography variant="body2" color="text.secondary">
-                  Booked by: {reservation.user.firstName} {reservation.user.lastName} (
-                  {reservation.user.email})
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Resource:{' '}
-                  <Button
-                    component={RouterLink}
-                    to={`/resources/${reservation.resourceId}`}
-                    size="small"
-                    sx={{ p: 0, minWidth: 0, verticalAlign: 'baseline' }}
-                  >
-                    View resource
-                  </Button>
-                </Typography>
-                <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
-                  {reservation.notes ?? 'No notes provided.'}
-                </Typography>
-                <Stack direction="row" spacing={1}>
-                  <Button variant="contained" disabled={!canEdit} onClick={() => setEditOpen(true)}>
-                    Edit
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    color="error"
-                    disabled={!canCancel}
-                    onClick={() => setCancelOpen(true)}
-                  >
-                    Cancel reservation
-                  </Button>
-                </Stack>
-              </Stack>
-            </CardContent>
-          </Card>
-        ) : null}
+        {reservationDetailQueryContent(isLoading, error, detailCard)}
       </Stack>
 
       {reservation && (

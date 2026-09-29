@@ -26,7 +26,7 @@ function getDelayUntilProactiveRefresh(): number {
   return Math.max(expiresAt - Date.now() - REFRESH_BEFORE_EXPIRY_MS, 5_000);
 }
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 

@@ -1,7 +1,5 @@
 import Alert from '@mui/material/Alert';
-import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
-import CircularProgress from '@mui/material/CircularProgress';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
@@ -22,6 +20,7 @@ import { AppLayout } from '../components/AppLayout';
 import * as resourceApi from '../services/resourceApi';
 import type { ListResourcesQuery, Resource, ResourceType } from '../types/resource';
 import { ApiError } from '../types/api';
+import { listQueryContent } from '../utils/queryStateContent';
 import {
   ACTIVE_FILTER_OPTIONS,
   getResourceTypeLabel,
@@ -182,13 +181,10 @@ export function ResourcesPage() {
 
         {error && <Alert severity="error">{error}</Alert>}
 
-        {isLoading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
-            <CircularProgress />
-          </Box>
-        ) : resources.length === 0 ? (
-          <Typography color="text.secondary">No resources match your filters.</Typography>
-        ) : (
+        {listQueryContent(
+          isLoading,
+          resources.length === 0,
+          <Typography color="text.secondary">No resources match your filters.</Typography>,
           <TableContainer component={Paper}>
             <Table>
               <TableHead>
@@ -226,7 +222,7 @@ export function ResourcesPage() {
                 ))}
               </TableBody>
             </Table>
-          </TableContainer>
+          </TableContainer>,
         )}
       </Stack>
     </AppLayout>

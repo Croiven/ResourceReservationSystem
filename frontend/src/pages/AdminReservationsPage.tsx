@@ -1,8 +1,6 @@
 import Alert from '@mui/material/Alert';
-import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
-import CircularProgress from '@mui/material/CircularProgress';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
@@ -41,6 +39,7 @@ import {
   STATUS_FILTER_OPTIONS,
   type StatusFilter,
 } from '../utils/reservationLabels';
+import { listQueryContent } from '../utils/queryStateContent';
 import { isReservationCancellable, isReservationEditable } from '../utils/reservationRules';
 
 export function AdminReservationsPage() {
@@ -212,13 +211,10 @@ export function AdminReservationsPage() {
 
         {error && <Alert severity="error">{error}</Alert>}
 
-        {isLoading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
-            <CircularProgress />
-          </Box>
-        ) : reservations.length === 0 ? (
-          <Typography color="text.secondary">No reservations match your filters.</Typography>
-        ) : (
+        {listQueryContent(
+          isLoading,
+          reservations.length === 0,
+          <Typography color="text.secondary">No reservations match your filters.</Typography>,
           <TableContainer component={Paper}>
             <Table>
               <TableHead>
@@ -296,7 +292,7 @@ export function AdminReservationsPage() {
                 ))}
               </TableBody>
             </Table>
-          </TableContainer>
+          </TableContainer>,
         )}
       </Stack>
 

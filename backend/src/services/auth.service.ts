@@ -19,10 +19,10 @@ import type {
 } from '../validation/auth.validation.js';
 import {
   ConflictError,
+  NotFoundError,
   UnauthorizedError,
   ValidationError,
 } from '../middleware/error.middleware.js';
-import { NotFoundError } from '../middleware/error.middleware.js';
 
 export class AuthService {
   async register(data: RegisterInput): Promise<UserResponse> {

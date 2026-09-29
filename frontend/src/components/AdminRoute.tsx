@@ -8,7 +8,7 @@ interface AdminRouteProps {
   children: ReactNode;
 }
 
-export function AdminRoute({ children }: AdminRouteProps) {
+export function AdminRoute({ children }: Readonly<AdminRouteProps>) {
   const { isAuthenticated, isLoading, user } = useAuth();
 
   if (isLoading) {

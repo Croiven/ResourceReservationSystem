@@ -14,7 +14,7 @@ export function renderWithProviders(
   { route = '/' }: ProviderOptions = {},
   options?: Omit<RenderOptions, 'wrapper'>,
 ) {
-  function Wrapper({ children }: { children: ReactNode }) {
+  function Wrapper({ children }: Readonly<{ children: ReactNode }>) {
     return (
       <ThemeProvider theme={theme}>
         <MemoryRouter initialEntries={[route]}>

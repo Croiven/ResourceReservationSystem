@@ -1,8 +1,6 @@
 import Alert from '@mui/material/Alert';
-import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
-import CircularProgress from '@mui/material/CircularProgress';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
@@ -37,6 +35,7 @@ import {
   type StatusFilter,
 } from '../utils/reservationLabels';
 import { isReservationCancellable, isReservationEditable } from '../utils/reservationRules';
+import { listQueryContent } from '../utils/queryStateContent';
 
 export function ReservationsPage() {
   const navigate = useNavigate();
@@ -130,18 +129,15 @@ export function ReservationsPage() {
 
         {error && <Alert severity="error">{error}</Alert>}
 
-        {isLoading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
-            <CircularProgress />
-          </Box>
-        ) : reservations.length === 0 ? (
+        {listQueryContent(
+          isLoading,
+          reservations.length === 0,
           <Stack spacing={2} sx={{ alignItems: 'flex-start' }}>
             <Typography color="text.secondary">You have no reservations.</Typography>
             <Button variant="contained" component={RouterLink} to="/resources">
               Browse resources
             </Button>
-          </Stack>
-        ) : (
+          </Stack>,
           <TableContainer component={Paper}>
             <Table>
               <TableHead>
@@ -201,7 +197,7 @@ export function ReservationsPage() {
                 ))}
               </TableBody>
             </Table>
-          </TableContainer>
+          </TableContainer>,
         )}
       </Stack>
 

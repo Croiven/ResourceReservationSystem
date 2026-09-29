@@ -8,7 +8,7 @@ interface AppLayoutProps {
   maxWidth?: 'sm' | 'md' | 'lg';
 }
 
-export function AppLayout({ children, maxWidth = 'md' }: AppLayoutProps) {
+export function AppLayout({ children, maxWidth = 'md' }: Readonly<AppLayoutProps>) {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <AppHeader />

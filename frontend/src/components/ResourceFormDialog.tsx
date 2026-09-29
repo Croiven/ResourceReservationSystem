@@ -13,6 +13,7 @@ import Select from '@mui/material/Select';
 import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
+import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import * as resourceApi from '../services/resourceApi';
 import { getTokens } from '../services/tokenStorage';
@@ -22,6 +23,16 @@ import { getResourceTypeLabel, RESOURCE_TYPE_OPTIONS } from '../utils/resourceLa
 
 const RESOURCE_TYPE_FORM_OPTIONS = RESOURCE_TYPE_OPTIONS.filter((option) => option.value !== '');
 
+function resourceFormSubmitLabel(isSubmitting: boolean, isEdit: boolean): ReactNode {
+  if (isSubmitting) {
+    return <CircularProgress size={24} />;
+  }
+  if (isEdit) {
+    return 'Save changes';
+  }
+  return 'Create resource';
+}
+
 interface ResourceFormDialogProps {
   open: boolean;
   resource?: Resource | null;
@@ -29,7 +40,12 @@ interface ResourceFormDialogProps {
   onSuccess: (resource: Resource) => void;
 }
 
-export function ResourceFormDialog({ open, resource, onClose, onSuccess }: ResourceFormDialogProps) {
+export function ResourceFormDialog({
+  open,
+  resource,
+  onClose,
+  onSuccess,
+}: Readonly<ResourceFormDialogProps>) {
   const isEdit = resource !== undefined && resource !== null;
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -168,7 +184,7 @@ export function ResourceFormDialog({ open, resource, onClose, onSuccess }: Resou
           Cancel
         </Button>
         <Button onClick={() => void handleSubmit()} variant="contained" disabled={isSubmitting}>
-          {isSubmitting ? <CircularProgress size={24} /> : isEdit ? 'Save changes' : 'Create resource'}
+          {resourceFormSubmitLabel(isSubmitting, isEdit)}
         </Button>
       </DialogActions>
     </Dialog>
