@@ -15,10 +15,12 @@ vi.mock('../services/tokenStorage', () => ({
 }));
 
 vi.mock('../utils/reservationEditAvailability', () => ({
-  checkEditAvailability: vi.fn(async () => ({
-    available: true,
-    message: 'This time slot is available.',
-  })),
+  checkEditAvailability: vi.fn(() =>
+    Promise.resolve({
+      severity: 'success' as const,
+      message: 'This time slot is available.',
+    }),
+  ),
 }));
 
 import * as reservationApi from '../services/reservationApi';

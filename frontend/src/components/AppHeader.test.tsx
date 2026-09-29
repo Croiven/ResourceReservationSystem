@@ -7,17 +7,17 @@ vi.mock('../hooks/useAuth', () => ({
   useAuth: vi.fn(),
 }));
 
-const useMediaQueryMock = vi.fn(() => false);
+const mediaQueryMock = vi.fn(() => false);
 
 vi.mock('@mui/material/useMediaQuery', () => ({
-  default: (query: unknown) => useMediaQueryMock(query),
+  default: mediaQueryMock,
 }));
 
 import { useAuth } from '../hooks/useAuth';
 
 describe('AppHeader', () => {
   beforeEach(() => {
-    useMediaQueryMock.mockReturnValue(false);
+    mediaQueryMock.mockReturnValue(false);
   });
 
   it('renders login and register when logged out', () => {
@@ -158,7 +158,7 @@ describe('AppHeader', () => {
   });
 
   it('opens mobile drawer and shows navigation links', () => {
-    useMediaQueryMock.mockReturnValue(true);
+    mediaQueryMock.mockReturnValue(true);
 
     vi.mocked(useAuth).mockReturnValue({
       user: {

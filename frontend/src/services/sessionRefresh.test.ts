@@ -49,7 +49,7 @@ describe('refreshAuthTokens', () => {
       vi.fn().mockResolvedValue({
         ok: false,
         status: 401,
-      } as Response),
+      }),
     );
 
     await expect(refreshAuthTokens('old-refresh')).rejects.toMatchObject({ statusCode: 401 });

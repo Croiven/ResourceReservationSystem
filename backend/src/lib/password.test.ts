@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('bcrypt', () => ({
   default: {
-    hash: vi.fn(async (plain: string) => `hash:${plain}`),
-    compare: vi.fn(async (plain: string, hash: string) => hash === `hash:${plain}`),
+    hash: vi.fn((plain: string) => Promise.resolve(`hash:${plain}`)),
+    compare: vi.fn((plain: string, hash: string) => Promise.resolve(hash === `hash:${plain}`)),
   },
 }));
 
